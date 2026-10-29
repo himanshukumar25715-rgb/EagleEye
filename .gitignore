@@ -44,6 +44,12 @@ frontend/.tmp/
 .stylelintcache
 *.tsbuildinfo
 
+# Model Weights
+*.pt
+*.onnx
+backend/weights/*
+!backend/weights/.gitkeep
+
 # Logs & Environment
 *.log
 .env
@@ -59,3 +65,4 @@ frontend/.tmp/
 *.swo
 .DS_Store
 Thumbs.db
+

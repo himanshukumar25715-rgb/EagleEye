@@ -12,7 +12,7 @@ from app.db.session import SessionLocal
 from app.models import Job, Source, Alert, Evidence, JobStatus, AlertStatus, AlertType
 from app.core.config import settings
 from app.services.websocket_manager import ws_manager
-from app.cv.pipeline import SimulatedOrYOLOPipeline, calculate_sha256
+from app.cv.pipeline import YOLO11SurveillancePipeline, calculate_sha256
 
 # In-memory store for active job cancel flags and live MJPEG streams
 active_cancel_flags: Dict[int, bool] = {}
@@ -46,7 +46,7 @@ def cancel_job(job_id: int):
 def _run_job_thread(job_id: int):
     """Worker background thread that analyzes video and flags security events"""
     db: Session = SessionLocal()
-    pipeline = SimulatedOrYOLOPipeline()
+    pipeline = YOLO11SurveillancePipeline()
 
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
