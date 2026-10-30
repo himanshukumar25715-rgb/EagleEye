@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VideoOff } from 'lucide-react';
+import { VideoOff, Upload } from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 
@@ -96,18 +96,6 @@ export const SourcesUpload: React.FC = () => {
   const startIndex = page * camerasPerPage;
   const currentCameras = ALL_CAMERAS.slice(startIndex, startIndex + camerasPerPage);
 
-  const handleNext9 = () => {
-    if (page < totalPages - 1) {
-      setPage(page + 1);
-    }
-  };
-
-  const handlePrev9 = () => {
-    if (page > 0) {
-      setPage(page - 1);
-    }
-  };
-
   // Upload logic
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -158,19 +146,11 @@ export const SourcesUpload: React.FC = () => {
     <div className="h-full w-full flex flex-col overflow-hidden select-none">
       {/* Top CCTV Matrix Toolbar */}
       <div className="flex-shrink-0 flex items-center justify-between gap-4 pb-2.5">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-brand-white">
-            CCTV camera matrix
-          </span>
-          <span className="text-xs px-2.5 py-0.5 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] text-brand-accent font-semibold font-mono">
-            Cameras {startIndex + 1}–{Math.min(startIndex + 9, ALL_CAMERAS.length)} of {ALL_CAMERAS.length}
-          </span>
-          <span className="text-xs text-brand-textMuted font-mono font-semibold">
-            {currentDate} {currentTime}
-          </span>
-        </div>
+        <h2 className="text-sm font-semibold text-brand-white">
+          CCTV camera matrix
+        </h2>
 
-        {/* Bank Switcher & Controls */}
+        {/* Bank Switcher & Upload */}
         <div className="flex items-center gap-2">
           {/* Quick Bank Tabs */}
           <div className="flex items-center gap-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] p-0.5">
@@ -189,28 +169,13 @@ export const SourcesUpload: React.FC = () => {
             ))}
           </div>
 
-          {/* Previous 9 / Next 9 Buttons */}
-          <button
-            onClick={handlePrev9}
-            disabled={page === 0}
-            className="px-3 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover text-brand-white rounded-[12px] text-xs font-semibold transition disabled:opacity-40 disabled:hover:bg-brand-card"
-          >
-            Previous 9
-          </button>
-          <button
-            onClick={handleNext9}
-            disabled={page >= totalPages - 1}
-            className="px-3 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover text-brand-white rounded-[12px] text-xs font-semibold transition disabled:opacity-40 disabled:hover:bg-brand-card"
-          >
-            Next 9
-          </button>
-
           {/* Upload Footage Modal Trigger */}
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-3 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-accent hover:text-white text-brand-accent rounded-[12px] text-xs font-semibold transition ml-2"
+            className="flex items-center gap-1.5 px-3 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-accent hover:text-white text-brand-accent rounded-[12px] text-xs font-semibold transition"
           >
-            Upload footage
+            <Upload className="w-3.5 h-3.5" />
+            <span>Upload footage</span>
           </button>
         </div>
       </div>
