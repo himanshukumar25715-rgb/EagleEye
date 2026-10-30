@@ -205,13 +205,13 @@ const Sidebar = React.forwardRef<
       >
         <div
           className={cn(
-            "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
+            "duration-300 relative h-svh bg-transparent transition-[width] ease-in-out",
             state === "expanded" ? "w-[--sidebar-width]" : "w-[--sidebar-width-icon]"
           )}
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] ease-linear md:flex flex-col border-r border-brand-border bg-brand-card shadow-[0_0_0_1px_#e6e3dc]",
+            "duration-300 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] ease-in-out md:flex flex-col border-r border-brand-border bg-brand-card shadow-[0_0_0_1px_#e6e3dc] overflow-hidden",
             side === "left"
               ? "left-0"
               : "right-0",
@@ -222,7 +222,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-brand-card"
+            className="flex h-full w-full flex-col bg-brand-card overflow-hidden"
           >
             {children}
           </div>
@@ -370,14 +370,16 @@ const SidebarGroupLabel = React.forwardRef<
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
   const { state } = useSidebar();
-  if (state === "collapsed") return null;
 
   return (
     <div
       ref={ref}
       data-sidebar="group-label"
       className={cn(
-        "flex h-7 shrink-0 items-center px-2 text-xs font-semibold text-brand-textMuted",
+        "flex h-7 shrink-0 items-center px-2 text-xs font-semibold text-brand-textMuted transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+        state === "collapsed"
+          ? "opacity-0 max-w-0 h-0 my-0 py-0 pointer-events-none"
+          : "opacity-100 max-w-full",
         className
       )}
       {...props}
@@ -457,11 +459,11 @@ const SidebarMenuButton = React.forwardRef<
         data-active={isActive}
         title={state === "collapsed" ? tooltip : undefined}
         className={cn(
-          "peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-[12px] p-2 text-left text-xs font-semibold outline-none transition-colors hover:bg-brand-cardHover hover:text-brand-white focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
+          "peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-[12px] p-2 text-left text-xs font-semibold outline-none transition-all duration-300 ease-in-out hover:bg-brand-cardHover hover:text-brand-white focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
           isActive
             ? "bg-brand-accent text-white hover:bg-brand-accent hover:text-white"
             : "text-brand-textMuted",
-          state === "collapsed" && "justify-center px-2",
+          state === "collapsed" ? "justify-center px-2" : "px-2.5",
           className
         )}
         {...props}
