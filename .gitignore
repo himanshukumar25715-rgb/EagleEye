@@ -58,6 +58,15 @@ backend/weights/*
 .env.test.local
 .env.production.local
 
+# Large datasets and video runs
+datasets/
+ABODA-master/
+aboda-dataset*/
+*.zip
+runs/
+*.avi
+*.mp4
+
 # IDEs & OS
 .vscode/
 .idea/

@@ -1,0 +1,8 @@
+path: C:/Users/himan/OneDrive/Desktop/PrototypeEagle/datasets/aboda_yolo
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: abandoned_object
+  1: person
+  2: luggage_bag

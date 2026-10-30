@@ -12,8 +12,11 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     ALGORITHM: str = "HS256"
     
-    # SQLite default, easily switchable to Postgres via DATABASE_URL
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./eagle_eye.db")
+    # Fixed absolute SQLite database path so backend always finds eagle_eye.db regardless of working directory
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        f"sqlite:///{os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'eagle_eye.db').replace(os.sep, '/')}"
+    )
     
     STORAGE_DIR: str = os.getenv("STORAGE_DIR", "./storage")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./storage/uploads")
@@ -25,6 +28,14 @@ class Settings(BaseSettings):
         "http://localhost:3000",
     ]
     
+    # Roboflow CCTV Gun & Knife Inference Workflow
+    ROBOFLOW_API_KEY: str = os.getenv("ROBOFLOW_API_KEY", "DUk7u9fEH6zkmpdD7NNw")
+    ROBOFLOW_WORKFLOW_URL: str = os.getenv(
+        "ROBOFLOW_WORKFLOW_URL",
+        "https://serverless.roboflow.com/himanshu-kumar-jfult/workflows/cctv-gun-and-knife-video-review-1793338581900"
+    )
+    USE_ROBOFLOW_WEAPON_API: bool = True
+
     # AI Pipeline Tuning defaults (from Section 9.2)
     WEAPON_CONFIDENCE_THRESHOLD: float = 0.50
     WEAPON_MIN_FRAMES_IN_LAST_5: int = 3

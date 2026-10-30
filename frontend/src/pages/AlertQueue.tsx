@@ -83,17 +83,17 @@ export const AlertQueue: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <BellRing className="w-6 h-6 text-campus-gold" />
+          <h2 className="text-2xl font-bold text-brand-white tracking-tight flex items-center gap-2">
+            <BellRing className="w-6 h-6 text-brand-yellow" />
             <span>Incident Alert Queue</span>
           </h2>
-          <p className="text-sm text-campus-textMuted mt-1">
+          <p className="text-sm text-brand-textMuted mt-1">
             Filter, inspect and escalate AI candidate detections requiring human verification.
           </p>
         </div>
         <button
           onClick={fetchAlerts}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-campus-card hover:bg-campus-border text-campus-textMuted hover:text-white rounded-lg text-xs font-semibold border border-campus-border transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-card hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white rounded-lg text-xs font-semibold border border-brand-border transition"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
@@ -101,17 +101,17 @@ export const AlertQueue: React.FC = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="p-4 rounded-xl bg-campus-card border border-campus-border flex flex-wrap items-center gap-4 text-xs">
+      <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex flex-wrap items-center gap-4 text-xs">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-campus-gold" />
-          <span className="font-semibold text-white uppercase tracking-wider">Filters:</span>
+          <Filter className="w-4 h-4 text-brand-yellow" />
+          <span className="font-semibold text-brand-white uppercase tracking-wider">Filters:</span>
         </div>
 
         <div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-1.5 bg-campus-darkest border border-campus-border rounded-lg text-white focus:outline-none focus:border-campus-gold"
+            className="px-3 py-1.5 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow font-medium"
           >
             <option value="">All Event Types</option>
             <option value="weapon">Weapon</option>
@@ -125,7 +125,7 @@ export const AlertQueue: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 bg-campus-darkest border border-campus-border rounded-lg text-white focus:outline-none focus:border-campus-gold"
+            className="px-3 py-1.5 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow font-medium"
           >
             <option value="">All Review Statuses</option>
             <option value="new">New</option>
@@ -138,8 +138,8 @@ export const AlertQueue: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-campus-textMuted">Min Confidence:</span>
-          <span className="font-mono text-campus-gold font-bold">{(minConfidence * 100).toFixed(0)}%</span>
+          <span className="text-brand-textMuted">Min Confidence:</span>
+          <span className="font-mono text-brand-yellow font-bold">{(minConfidence * 100).toFixed(0)}%</span>
           <input
             type="range"
             min="0.3"
@@ -147,16 +147,16 @@ export const AlertQueue: React.FC = () => {
             step="0.05"
             value={minConfidence}
             onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
-            className="w-24 accent-campus-gold"
+            className="w-24 accent-brand-yellow"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl bg-campus-card border border-campus-border overflow-hidden">
+      <div className="rounded-xl bg-brand-card border border-brand-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-campus-dark text-xs uppercase tracking-wider text-campus-textMuted border-b border-campus-border">
+            <thead className="bg-brand-dark text-xs uppercase tracking-wider text-brand-textMuted border-b border-brand-border">
               <tr>
                 <th className="py-3 px-4">Alert ID</th>
                 <th className="py-3 px-4">Event Type</th>
@@ -168,44 +168,44 @@ export const AlertQueue: React.FC = () => {
                 <th className="py-3 px-4 text-right">Review</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-campus-border">
+            <tbody className="divide-y divide-brand-border">
               {alerts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-campus-textMuted text-xs">
+                  <td colSpan={8} className="py-8 text-center text-brand-textMuted text-xs">
                     No incident alerts match the current filter criteria.
                   </td>
                 </tr>
               ) : (
                 alerts.map((al) => (
-                  <tr key={al.id} className="hover:bg-campus-cardHover/70 transition">
-                    <td className="py-3 px-4 font-mono text-xs text-campus-gold font-semibold">
+                  <tr key={al.id} className="hover:bg-brand-cardHover transition">
+                    <td className="py-3 px-4 font-mono text-xs text-brand-yellow font-bold">
                       #{al.id}
                     </td>
                     <td className="py-3 px-4">
                       <TypeBadge type={al.type} />
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-medium text-white">{al.location_label}</div>
-                      <div className="text-xs text-campus-textMuted">{al.source_name}</div>
+                      <div className="font-bold text-brand-white">{al.location_label}</div>
+                      <div className="text-xs text-brand-textMuted">{al.source_name}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-white font-mono">
+                      <div className="font-bold text-brand-white font-mono">
                         {(al.confidence * 100).toFixed(0)}%
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-campus-textMuted">
+                    <td className="py-3 px-4 font-mono text-xs text-brand-textMuted">
                       {al.track_ids || 'N/A'}
                     </td>
                     <td className="py-3 px-4">
                       <StatusBadge status={al.status} />
                     </td>
-                    <td className="py-3 px-4 text-xs text-campus-textMuted">
+                    <td className="py-3 px-4 text-xs text-brand-textMuted">
                       {new Date(al.created_at).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => navigate(`/alerts/${al.id}`)}
-                        className="px-3 py-1 bg-campus-card hover:bg-campus-gold hover:text-campus-darkest text-xs font-semibold text-campus-gold border border-campus-gold/30 rounded transition flex items-center gap-1 ml-auto"
+                        className="px-3 py-1 bg-brand-black hover:bg-brand-yellow hover:text-brand-black text-xs font-bold text-brand-yellow border border-brand-yellow/40 rounded transition flex items-center gap-1 ml-auto"
                       >
                         <span>Review</span>
                         <ExternalLink className="w-3.5 h-3.5" />

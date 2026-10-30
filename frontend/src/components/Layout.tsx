@@ -40,21 +40,21 @@ export const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-campus-darkest text-campus-text">
+    <div className="flex h-screen w-screen overflow-hidden bg-brand-black text-brand-white">
       {/* Toast notifications */}
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-center justify-between gap-3 p-3 bg-red-950/90 border border-red-500/50 rounded-lg shadow-xl shadow-red-950/40 text-sm backdrop-blur-md"
+            className="pointer-events-auto flex items-center justify-between gap-3 p-3 bg-brand-darkest border-2 border-brand-red rounded-lg shadow-2xl text-sm backdrop-blur-md"
           >
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-campus-gold flex-shrink-0" />
-              <span className="font-medium text-white">{toast.message}</span>
+              <AlertTriangle className="w-5 h-5 text-brand-yellow flex-shrink-0" />
+              <span className="font-bold text-brand-white">{toast.message}</span>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-gray-400 hover:text-white"
+              className="text-brand-textMuted hover:text-brand-white"
             >
               <X className="w-4 h-4" />
             </button>
@@ -63,25 +63,25 @@ export const Layout: React.FC = () => {
       </div>
 
       {/* Sidebar */}
-      <aside className="w-64 flex flex-col bg-campus-dark border-r border-campus-border">
+      <aside className="w-64 flex flex-col bg-brand-dark border-r border-brand-border">
         {/* Brand */}
-        <div className="p-5 flex items-center gap-3 border-b border-campus-border">
-          <div className="w-10 h-10 rounded-lg bg-campus-card border border-campus-gold/30 flex items-center justify-center">
-            <ShieldAlert className="w-6 h-6 text-campus-gold" />
+        <div className="p-5 flex items-center gap-3 border-b border-brand-border">
+          <div className="w-10 h-10 rounded-lg bg-brand-black border border-brand-yellow flex items-center justify-center">
+            <ShieldAlert className="w-6 h-6 text-brand-yellow" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-campus-gold tracking-tight">Eagle Eye</h1>
-            <p className="text-xs text-campus-textMuted">Campus Surveillance AI</p>
+            <h1 className="font-extrabold text-lg text-brand-white tracking-tight">Eagle Eye</h1>
+            <p className="text-xs text-brand-yellow font-semibold tracking-wide">SURVEILLANCE AI</p>
           </div>
         </div>
 
         {/* Live System Status Pill */}
-        <div className="px-5 py-3 border-b border-campus-border/60 flex items-center justify-between text-xs">
+        <div className="px-5 py-3 border-b border-brand-border flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <Radio className={`w-3.5 h-3.5 ${wsConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-500'}`} />
-            <span className="text-campus-textMuted">Live Event Stream:</span>
+            <Radio className={`w-3.5 h-3.5 ${wsConnected ? 'text-brand-yellow animate-pulse' : 'text-brand-red'}`} />
+            <span className="text-brand-textMuted">Live Event Stream:</span>
           </div>
-          <span className={`font-semibold ${wsConnected ? 'text-emerald-400' : 'text-amber-500'}`}>
+          <span className={`font-mono font-bold ${wsConnected ? 'text-brand-yellow' : 'text-brand-red'}`}>
             {wsConnected ? 'ACTIVE' : 'OFFLINE'}
           </span>
         </div>
@@ -97,10 +97,10 @@ export const Layout: React.FC = () => {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-campus-gold text-campus-darkest font-semibold shadow-md shadow-campus-gold/10'
-                      : 'text-campus-textMuted hover:bg-campus-card hover:text-white'
+                      ? 'bg-brand-yellow text-brand-black shadow-md'
+                      : 'text-brand-textMuted hover:bg-brand-card hover:text-brand-white'
                   }`
                 }
               >
@@ -112,17 +112,17 @@ export const Layout: React.FC = () => {
         </nav>
 
         {/* User Card & Logout */}
-        <div className="p-4 border-t border-campus-border bg-campus-darkest/40 flex items-center justify-between">
+        <div className="p-4 border-t border-brand-border bg-brand-black flex items-center justify-between">
           <div className="truncate pr-2">
-            <p className="text-sm font-semibold truncate text-white">{user?.name || 'Operator'}</p>
-            <span className="inline-block px-2 py-0.5 mt-0.5 text-[10px] font-bold uppercase rounded bg-campus-gold/10 text-campus-gold border border-campus-gold/20">
+            <p className="text-sm font-bold truncate text-brand-white">{user?.name || 'Operator'}</p>
+            <span className="inline-block px-2 py-0.5 mt-0.5 text-[10px] font-bold uppercase rounded bg-brand-card text-brand-yellow border border-brand-borderLight">
               {user?.role || 'Viewer'}
             </span>
           </div>
           <button
             onClick={handleLogout}
             title="Log Out"
-            className="p-2 rounded-md hover:bg-campus-card text-campus-textMuted hover:text-red-400 transition"
+            className="p-2 rounded-md hover:bg-brand-card text-brand-textMuted hover:text-brand-red transition"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -130,19 +130,19 @@ export const Layout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-campus-darkest">
-        <header className="h-14 border-b border-campus-border bg-campus-dark/80 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-campus-textMuted">
-            <span>Eagle Eye v2.0</span>
+      <main className="flex-1 flex flex-col overflow-hidden bg-brand-black">
+        <header className="h-14 border-b border-brand-border bg-brand-dark px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-brand-textMuted">
+            <span className="font-semibold text-brand-white">Eagle Eye 2.0</span>
             <span>•</span>
-            <span className="text-campus-gold font-medium">Ctrl+Shift+Go Security Suite</span>
+            <span className="text-brand-yellow font-bold">CCTV Threat Intelligence</span>
           </div>
-          <div className="text-xs bg-campus-card px-3 py-1 rounded-full border border-campus-border text-campus-textMuted">
-            Campus Node: <span className="text-white font-medium">Hostel & Perimeter Hub</span>
+          <div className="text-xs bg-brand-card px-3 py-1 rounded border border-brand-border text-brand-textMuted">
+            Security Node: <span className="text-brand-white font-bold">Perimeter & Corridor Hub</span>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-brand-black">
           <Outlet />
         </div>
       </main>

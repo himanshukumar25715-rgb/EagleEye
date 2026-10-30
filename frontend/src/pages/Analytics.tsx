@@ -14,7 +14,7 @@ import {
 import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import { apiRequest } from '../api/client';
 
-const COLORS = ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'];
+const COLORS = ['#FF3333', '#FFCC00', '#FFFFFF', '#8B0000'];
 
 export const Analytics: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
@@ -57,7 +57,7 @@ export const Analytics: React.FC = () => {
   }, []);
 
   if (loading || !summary) {
-    return <div className="text-sm text-campus-textMuted">Loading security intelligence metrics...</div>;
+    return <div className="text-sm text-brand-textMuted">Loading security intelligence metrics...</div>;
   }
 
   const typeData = Object.entries(summary.alerts_by_type || {}).map(([name, value]) => ({
@@ -78,58 +78,58 @@ export const Analytics: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-campus-gold" />
+        <h2 className="text-2xl font-bold text-brand-white tracking-tight flex items-center gap-2">
+          <BarChart3 className="w-6 h-6 text-brand-yellow" />
           <span>Surveillance Intelligence & Analytics</span>
         </h2>
-        <p className="text-sm text-campus-textMuted mt-1">
+        <p className="text-sm text-brand-textMuted mt-1">
           Historical incident trends, AI model false-alarm metrics, and response benchmarks.
         </p>
       </div>
 
       {/* Top Benchmark KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-campus-card border border-campus-border flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-campus-textMuted uppercase tracking-wider">
+            <p className="text-xs font-semibold text-brand-textMuted uppercase tracking-wider">
               Avg Operator Response Time
             </p>
-            <p className="text-2xl font-extrabold text-white mt-1">
+            <p className="text-2xl font-extrabold text-brand-white mt-1">
               {summary.avg_review_time_mins} mins
             </p>
-            <span className="text-[11px] text-emerald-400 font-medium">Within 5m campus SLA</span>
+            <span className="text-[11px] text-brand-yellow font-medium">Within 5m campus SLA</span>
           </div>
-          <div className="p-3 bg-campus-dark rounded-lg text-campus-gold border border-campus-border">
+          <div className="p-3 bg-brand-dark rounded-lg text-brand-yellow border border-brand-border">
             <Clock className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-campus-card border border-campus-border flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-campus-textMuted uppercase tracking-wider">
+            <p className="text-xs font-semibold text-brand-textMuted uppercase tracking-wider">
               Model Precision / False Alarm Rate
             </p>
-            <p className="text-2xl font-extrabold text-campus-gold mt-1">
+            <p className="text-2xl font-extrabold text-brand-yellow mt-1">
               {summary.false_alarm_rate}%
             </p>
-            <span className="text-[11px] text-campus-textMuted">Filtered via multi-frame rules</span>
+            <span className="text-[11px] text-brand-textMuted">Filtered via multi-frame rules</span>
           </div>
-          <div className="p-3 bg-campus-dark rounded-lg text-amber-400 border border-campus-border">
+          <div className="p-3 bg-brand-dark rounded-lg text-brand-yellow border border-brand-border">
             <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-campus-card border border-campus-border flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-campus-textMuted uppercase tracking-wider">
+            <p className="text-xs font-semibold text-brand-textMuted uppercase tracking-wider">
               Total Verified Incidents
             </p>
-            <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+            <p className="text-2xl font-extrabold text-brand-white mt-1">
               {summary.confirmed_alerts}
             </p>
-            <span className="text-[11px] text-emerald-400 font-medium">Logged & hashed for audit</span>
+            <span className="text-[11px] text-brand-yellow font-medium">Logged & hashed for audit</span>
           </div>
-          <div className="p-3 bg-campus-dark rounded-lg text-emerald-400 border border-campus-border">
+          <div className="p-3 bg-brand-dark rounded-lg text-brand-white border border-brand-border">
             <ShieldCheck className="w-5 h-5" />
           </div>
         </div>
@@ -138,8 +138,8 @@ export const Analytics: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Alerts by Type (Pie Chart) */}
-        <div className="p-5 rounded-xl bg-campus-card border border-campus-border">
-          <h3 className="text-sm font-semibold text-white mb-4">Incidents by Event Classification</h3>
+        <div className="p-5 rounded-xl bg-brand-card border border-brand-border">
+          <h3 className="text-sm font-semibold text-brand-white mb-4">Incidents by Event Classification</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -157,23 +157,23 @@ export const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: '#181818', borderColor: '#444444', color: '#FFFFFF', borderRadius: '8px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Hourly Distribution (Bar Chart) */}
-        <div className="p-5 rounded-xl bg-campus-card border border-campus-border">
-          <h3 className="text-sm font-semibold text-white mb-4">Peak Activity by Hour</h3>
+        <div className="p-5 rounded-xl bg-brand-card border border-brand-border">
+          <h3 className="text-sm font-semibold text-brand-white mb-4">Peak Activity by Hour</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={hourData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#244331" />
-                <XAxis dataKey="hour" stroke="#9CA3AF" fontSize={11} />
-                <YAxis stroke="#9CA3AF" fontSize={11} />
-                <Tooltip contentStyle={{ backgroundColor: '#0E1A13', borderColor: '#244331' }} />
-                <Bar dataKey="count" fill="#E5B842" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2E2E2E" />
+                <XAxis dataKey="hour" stroke="#A3A3A3" fontSize={11} />
+                <YAxis stroke="#A3A3A3" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: '#181818', borderColor: '#444444', color: '#FFFFFF', borderRadius: '8px' }} />
+                <Bar dataKey="count" fill="#FFCC00" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
