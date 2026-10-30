@@ -8,6 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: 'hsl(0 0% 100%)',
         brand: {
           black: '#000000',
           darkest: '#0A0A0A',

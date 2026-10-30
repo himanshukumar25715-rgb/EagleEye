@@ -41,15 +41,18 @@ export const useAlertStore = create<AlertStoreState>((set, get) => ({
   initWebSocket: () => {
     if (socket && socket.readyState === WebSocket.OPEN) return;
 
+    try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/ws/alerts`;
+      const ws = new WebSocket(wsUrl);
+      socket = ws;
 
-      socket.onopen = () => {
+      ws.onopen = () => {
         set({ wsConnected: true });
         console.log('[EagleEye WS] Connected to live security feed');
       };
 
-      socket.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data);
           if (payload.event === 'alert.created') {
@@ -78,12 +81,12 @@ export const useAlertStore = create<AlertStoreState>((set, get) => ({
         }
       };
 
-      socket.onclose = () => {
+      ws.onclose = () => {
         set({ wsConnected: false });
         setTimeout(() => get().initWebSocket(), 5000); // retry reconnect
       };
 
-      socket.onerror = () => {
+      ws.onerror = () => {
         set({ wsConnected: false });
       };
     } catch {

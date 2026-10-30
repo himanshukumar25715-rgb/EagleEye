@@ -177,32 +177,6 @@ export const VideoViewer: React.FC = () => {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Main Video Stream Container */}
-      <div className="relative aspect-video w-full max-w-5xl mx-auto rounded-xl bg-campus-darkest border border-campus-border overflow-hidden shadow-2xl flex items-center justify-center">
-        {/* MJPEG Live Stream or Seekable Video */}
-        {currentStatus === 'processing' ? (
-          <img
-            src={`${BASE_URL}/jobs/${id}/stream`}
-            alt="Annotated MJPEG Feed"
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          <video
-            src={`${BASE_URL}/jobs/${id}/video`}
-            controls
-            autoPlay
-            muted
-            className="w-full h-full object-contain"
-          />
-        )}
-
-        {/* Real-time HUD Status Overlay */}
-        <div className="absolute top-4 left-4 bg-campus-darkest/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-campus-border text-xs flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-mono">
-            <span className={`w-2 h-2 rounded-full ${currentStatus === 'processing' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-            <span className="uppercase font-bold text-white">{currentStatus}</span>
-=======
       {/* MULTI-CAMERA MATRIX VIEW (when toggled) */}
       {showMatrix && allSources.length > 1 && (
         <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3">
@@ -212,7 +186,6 @@ export const VideoViewer: React.FC = () => {
               <span>Concurrent CCTV Multi-Feed Matrix</span>
             </h3>
             <span className="text-[11px] text-brand-textMuted">Click any feed to focus</span>
->>>>>>> b5ec15c728c4cc81e4302335e2ca4112e14a643a
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
