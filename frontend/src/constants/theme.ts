@@ -1,6 +1,9 @@
 export const PALETTE = {
-  BLACK: "#000000",
-  WHITE: "#FFFFFF",
-  YELLOW: "#FFCC00",
-  RED: "#FF3333",
+  BACKGROUND: "#f5f4f0",
+  ACCENT: "#0047ab",
+  BLACK: "#14171a",
+  WHITE: "#ffffff",
+  YELLOW: "#0047ab",
+  RED: "#dc2626",
 };
+

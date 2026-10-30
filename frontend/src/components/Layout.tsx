@@ -55,13 +55,13 @@ export const Layout: React.FC = () => {
         {/* Brand */}
         <div className="p-5 border-b border-brand-border">
           <h1 className="font-extrabold text-lg text-brand-white tracking-tight">Eagle Eye</h1>
-          <p className="text-xs text-amber-600 font-semibold tracking-wide">SURVEILLANCE AI</p>
+          <p className="text-xs text-[#0047ab] font-bold tracking-wide">SURVEILLANCE AI</p>
         </div>
 
         {/* Live System Status Pill */}
         <div className="px-5 py-3 border-b border-brand-border flex items-center justify-between text-xs">
           <span className="text-brand-textMuted">Live Event Stream:</span>
-          <span className={`font-mono font-bold ${wsConnected ? 'text-amber-600' : 'text-brand-red'}`}>
+          <span className={`font-mono font-bold ${wsConnected ? 'text-[#0047ab]' : 'text-brand-red'}`}>
             {wsConnected ? 'ACTIVE' : 'OFFLINE'}
           </span>
         </div>
@@ -76,10 +76,10 @@ export const Layout: React.FC = () => {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `block px-3.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  `block px-3.5 py-2.5 rounded-lg text-sm transition-all ${
                     isActive
-                      ? 'bg-brand-yellow text-brand-black shadow-sm font-bold'
-                      : 'text-brand-textMuted hover:bg-brand-card hover:text-brand-white'
+                      ? 'bg-brand-yellow text-white shadow-sm font-bold'
+                      : 'text-brand-textMuted hover:bg-brand-card hover:text-brand-white font-medium'
                   }`
                 }
               >
@@ -93,7 +93,7 @@ export const Layout: React.FC = () => {
         <div className="p-4 border-t border-brand-border bg-brand-black flex items-center justify-between">
           <div className="truncate pr-2">
             <p className="text-sm font-bold truncate text-brand-white">{user?.name || 'Operator'}</p>
-            <span className="inline-block px-2 py-0.5 mt-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-900 border border-amber-300">
+            <span className="inline-block px-2 py-0.5 mt-0.5 text-[10px] font-bold uppercase rounded bg-[#0047ab]/10 text-[#0047ab] border border-[#0047ab]/30">
               {user?.role || 'Viewer'}
             </span>
           </div>

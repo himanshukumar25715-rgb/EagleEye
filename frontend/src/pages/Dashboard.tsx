@@ -47,7 +47,7 @@ export const Dashboard: React.FC = () => {
         </div>
         <button
           onClick={() => navigate('/sources')}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-bold rounded text-sm shadow transition"
+          className="flex items-center gap-2 px-4 py-2 bg-brand-yellow hover:bg-brand-yellowHover text-white font-bold rounded text-sm shadow transition"
         >
           <span>Upload CCTV Footage</span>
           <ArrowUpRight className="w-4 h-4" />
@@ -157,7 +157,7 @@ export const Dashboard: React.FC = () => {
                   <td className="py-3 px-4 text-right">
                     <button
                       onClick={() => navigate(`/alerts/${alert.id}`)}
-                      className="px-3 py-1 bg-brand-black hover:bg-brand-yellow hover:text-brand-black text-xs font-bold text-brand-yellow border border-brand-yellow rounded transition"
+                      className="px-3 py-1 bg-brand-card hover:bg-brand-yellow hover:text-white text-xs font-bold text-brand-yellow border border-brand-yellow rounded transition"
                     >
                       Review
                     </button>

@@ -136,7 +136,7 @@ export const SourcesUpload: React.FC = () => {
               Supports single or multiple video files (.mp4, .avi, .mkv).
             </p>
 
-            <label className="mt-4 px-4 py-2 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-extrabold text-xs rounded cursor-pointer shadow transition flex items-center gap-2">
+            <label className="mt-4 px-4 py-2 bg-brand-yellow hover:bg-brand-yellowHover text-white font-extrabold text-xs rounded cursor-pointer shadow transition flex items-center gap-2">
               <Plus className="w-4 h-4" />
               <span>Browse CCTV Videos</span>
               <input
@@ -200,9 +200,9 @@ export const SourcesUpload: React.FC = () => {
                 type="button"
                 disabled={uploading || selectedFiles.length === 0}
                 onClick={() => handleUploadAndRun(true)}
-                className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-black rounded text-xs transition disabled:opacity-50 flex items-center justify-center gap-2 shadow"
+                className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-white font-black rounded text-xs transition disabled:opacity-50 flex items-center justify-center gap-2 shadow"
               >
-                <Play className="w-4 h-4 fill-brand-black" />
+                <Play className="w-4 h-4 fill-white" />
                 <span>{uploading ? 'Ingesting Footage...' : 'Upload & Start Analysis Live'}</span>
               </button>
 
@@ -285,9 +285,9 @@ export const SourcesUpload: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleStartJob(src.id)}
-                          className="px-2.5 py-1 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black text-xs font-black rounded flex items-center gap-1 shadow transition"
+                          className="px-2.5 py-1 bg-brand-yellow hover:bg-brand-yellowHover text-white text-xs font-black rounded flex items-center gap-1 shadow transition"
                         >
-                          <Play className="w-3 h-3 fill-brand-black" />
+                          <Play className="w-3 h-3 fill-white" />
                           <span>{isRunning ? 'Restart' : 'Start'}</span>
                         </button>
 

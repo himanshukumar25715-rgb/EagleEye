@@ -173,7 +173,7 @@ export const Analytics: React.FC = () => {
                 <XAxis dataKey="hour" stroke="#6b7280" fontSize={11} />
                 <YAxis stroke="#6b7280" fontSize={11} />
                 <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', borderRadius: '8px' }} />
-                <Bar dataKey="count" fill="#FFCC00" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#0047ab" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

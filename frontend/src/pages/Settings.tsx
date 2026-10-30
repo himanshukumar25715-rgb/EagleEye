@@ -213,7 +213,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2.5 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-extrabold rounded-lg text-sm flex items-center gap-2 shadow transition disabled:opacity-50"
+          className="px-6 py-2.5 bg-brand-yellow hover:bg-brand-yellowHover text-white font-extrabold rounded-lg text-sm flex items-center gap-2 shadow transition disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
           <span>{saving ? 'Saving...' : 'Save Configuration'}</span>

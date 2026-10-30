@@ -205,7 +205,7 @@ export const AlertQueue: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => navigate(`/alerts/${al.id}`)}
-                        className="px-3 py-1 bg-brand-black hover:bg-brand-yellow hover:text-brand-black text-xs font-bold text-brand-yellow border border-brand-yellow/40 rounded transition flex items-center gap-1 ml-auto"
+                        className="px-3 py-1 bg-brand-card hover:bg-brand-yellow hover:text-white text-xs font-bold text-brand-yellow border border-brand-yellow/40 rounded transition flex items-center gap-1 ml-auto"
                       >
                         <span>Review</span>
                         <ExternalLink className="w-3.5 h-3.5" />

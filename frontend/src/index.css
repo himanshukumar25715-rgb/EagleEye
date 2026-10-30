@@ -3,16 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0 0% 100%);
-  --brand-black: hsl(0 0% 100%);
-  --brand-darkest: hsl(0 0% 98%);
-  --brand-dark: hsl(0 0% 96%);
-  --brand-card: hsl(0 0% 100%);
-  --brand-card-hover: hsl(0 0% 95%);
-  --brand-border: hsl(0 0% 88%);
-  --brand-border-light: hsl(0 0% 80%);
-  --brand-white: hsl(0 0% 10%);
-  --brand-text-muted: hsl(0 0% 45%);
+  --background: #f5f4f0;
+  --brand-black: #f5f4f0;
+  --brand-darkest: #f0eee8;
+  --brand-dark: #ebe9e1;
+  --brand-card: #ffffff;
+  --brand-card-hover: #faf9f6;
+  --brand-border: #e2dfd5;
+  --brand-border-light: #d6d2c4;
+  --brand-white: #14171a;
+  --brand-text-muted: #5e6472;
+  --brand-accent: #0047ab;
+  --brand-accent-hover: #003888;
+  --brand-accent-dark: #002b66;
   color-scheme: light;
 }
 
@@ -20,35 +23,31 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-color: hsl(0 0% 100%) !important;
-  background: hsl(0 0% 100%) !important;
-  color: hsl(0 0% 10%);
+  background-color: #f5f4f0 !important;
+  background: #f5f4f0 !important;
+  color: #14171a;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 #root {
-  background-color: hsl(0 0% 100%) !important;
-  background: hsl(0 0% 100%) !important;
+  background-color: #f5f4f0 !important;
+  background: #f5f4f0 !important;
   min-height: 100vh;
 }
 
-.text-brand-black {
-  color: #000000 !important;
-}
-
-/* Custom Scrollbar - Light & Yellow Accent */
+/* Custom Scrollbar - Warm Alabaster & Cobalt Blue Accent */
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(0 0% 96%);
+  background: #ebe9e1;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 80%);
+  background: #d6d2c4;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #FFCC00;
+  background: #0047ab;
 }

@@ -147,7 +147,7 @@ export const VideoViewer: React.FC = () => {
             onClick={() => setShowMatrix(!showMatrix)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition ${
               showMatrix
-                ? 'bg-brand-yellow text-brand-black border-brand-yellow font-bold'
+                ? 'bg-brand-yellow text-white border-brand-yellow font-bold'
                 : 'bg-brand-card text-brand-textMuted border-brand-border hover:text-brand-white'
             }`}
           >
@@ -168,9 +168,9 @@ export const VideoViewer: React.FC = () => {
             <button
               onClick={handleStartAnalysis}
               disabled={isStarting}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-yellow hover:bg-brand-yellowHover text-brand-black flex items-center gap-1.5 transition shadow"
+              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-yellow hover:bg-brand-yellowHover text-white flex items-center gap-1.5 transition shadow"
             >
-              <Play className="w-3.5 h-3.5 fill-brand-black" />
+              <Play className="w-3.5 h-3.5 fill-white" />
               <span>{currentStatus === 'completed' ? 'Re-run Analysis' : 'Start Video Analysis'}</span>
             </button>
           )}
@@ -259,7 +259,7 @@ export const VideoViewer: React.FC = () => {
                 <span className="text-brand-white font-medium">Video Analysis Sequence Completed</span>
                 <button
                   onClick={handleStartAnalysis}
-                  className="px-2.5 py-0.5 rounded bg-brand-yellow text-brand-black font-bold hover:bg-brand-yellowHover"
+                  className="px-2.5 py-0.5 rounded bg-brand-yellow text-white font-bold hover:bg-brand-yellowHover"
                 >
                   Restart
                 </button>

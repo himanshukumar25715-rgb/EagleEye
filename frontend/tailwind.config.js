@@ -8,7 +8,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'hsl(0 0% 100%)',
+        background: '#f5f4f0',
+        accent: {
+          DEFAULT: '#0047ab',
+          hover: '#003888',
+          dark: '#002b66',
+          light: '#e6effa',
+        },
         brand: {
           black: 'var(--brand-black)',
           darkest: 'var(--brand-darkest)',
@@ -19,12 +25,15 @@ export default {
           borderLight: 'var(--brand-border-light)',
           white: 'var(--brand-white)',
           textMuted: 'var(--brand-text-muted)',
-          yellow: '#FFCC00',
-          yellowHover: '#FFD633',
-          yellowDark: '#B28F00',
-          red: '#FF3333',
-          redHover: '#FF4D4D',
-          redDark: '#8B0000',
+          yellow: '#0047ab',
+          yellowHover: '#003888',
+          yellowDark: '#002b66',
+          accent: '#0047ab',
+          accentHover: '#003888',
+          accentDark: '#002b66',
+          red: '#dc2626',
+          redHover: '#b91c1c',
+          redDark: '#991b1b',
         },
         campus: {
           black: '#000000',

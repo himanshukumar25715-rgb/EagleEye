@@ -111,7 +111,7 @@ export const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-extrabold rounded-lg text-sm transition flex items-center justify-center gap-2 shadow"
+              className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-white font-extrabold rounded-lg text-sm transition flex items-center justify-center gap-2 shadow"
             >
               <span>{loading ? 'Authenticating...' : 'Access Command Console'}</span>
               <ArrowRight className="w-4 h-4" />
