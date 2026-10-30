@@ -56,6 +56,7 @@ export default function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="sources" element={<SourcesUpload />} />
+            <Route path="cameras" element={<SourcesUpload />} />
             <Route path="jobs/:id" element={<VideoViewer />} />
             <Route path="alerts" element={<AlertQueue />} />
             <Route path="alerts/:id" element={<AlertReview />} />

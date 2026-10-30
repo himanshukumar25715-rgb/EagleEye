@@ -40,7 +40,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navPlatform = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/sources", label: "Sources & upload", icon: Video },
+    { to: "/sources", label: "CCTV cameras", icon: Video },
     { to: "/alerts", label: "Alert queue", icon: Bell },
     { to: "/analytics", label: "Analytics", icon: BarChart3 },
   ];

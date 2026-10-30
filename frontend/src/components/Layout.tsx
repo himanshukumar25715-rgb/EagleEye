@@ -28,7 +28,7 @@ export const Layout: React.FC = () => {
 
   const getPageTitle = (pathname: string): string => {
     if (pathname === "/") return "Dashboard";
-    if (pathname.startsWith("/sources")) return "Sources & upload";
+    if (pathname.startsWith("/sources") || pathname.startsWith("/cameras")) return "CCTV camera matrix";
     if (pathname.startsWith("/alerts/") && pathname.length > 8) return "Alert review";
     if (pathname.startsWith("/alerts")) return "Alert queue";
     if (pathname.startsWith("/jobs/")) return "Live video feed";
@@ -39,6 +39,7 @@ export const Layout: React.FC = () => {
   };
 
   const pageTitle = getPageTitle(location.pathname);
+  const isCctvWall = location.pathname.startsWith("/sources") || location.pathname.startsWith("/cameras");
 
   return (
     <SidebarProvider>
@@ -95,8 +96,14 @@ export const Layout: React.FC = () => {
           </div>
         </header>
 
-        {/* Viewport Content */}
-        <div className="flex flex-1 flex-col gap-4 p-6 overflow-y-auto bg-brand-black">
+        {/* Viewport Content: Unscrollable for CCTV 9-Camera Matrix */}
+        <div
+          className={`flex flex-1 flex-col ${
+            isCctvWall
+              ? "p-3 h-[calc(100vh-3.5rem)] overflow-hidden"
+              : "p-6 overflow-y-auto"
+          } bg-brand-black`}
+        >
           <Outlet />
         </div>
       </SidebarInset>

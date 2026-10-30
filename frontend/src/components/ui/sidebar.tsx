@@ -490,3 +490,4 @@ export {
   SidebarMenuItem,
   SidebarMenuButton,
 };
+
