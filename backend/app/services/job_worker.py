@@ -86,6 +86,16 @@ def _run_job_thread(job_id: int):
         }))
 
         video_path = job.source.path_or_uri
+        if not os.path.isabs(video_path) and not os.path.exists(video_path):
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            alt_path = os.path.join(base_dir, video_path.lstrip('./\\'))
+            if os.path.exists(alt_path):
+                video_path = alt_path
+            else:
+                uploads_alt = os.path.join(settings.STORAGE_DIR, 'uploads', os.path.basename(video_path))
+                if os.path.exists(uploads_alt):
+                    video_path = uploads_alt
+
         cap = cv2.VideoCapture(video_path)
 
         if not cap.isOpened():
@@ -130,7 +140,16 @@ def _run_job_thread(job_id: int):
             loop_start = time.time()
             ret, frame = cap.read()
             if not ret:
-                break
+                # Seamless continuous CCTV loop for surveillance feeds
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_idx = 0
+                ret, frame = cap.read()
+                if not ret:
+                    cap.release()
+                    cap = cv2.VideoCapture(video_path)
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
 
             frame_idx += 1
             if frame_idx % sample_step != 0:

@@ -16,9 +16,9 @@ interface CameraFeed {
 const ALL_CAMERAS: CameraFeed[] = [
   // Bank 1: 1 - 9
   { id: 1, name: 'CAM-01', location: 'Main Entrance Gate 1', status: 'active', fps: 25, sourceId: 1 },
-  { id: 2, name: 'CAM-02', location: 'North Perimeter Walkway', status: 'active', fps: 25 },
-  { id: 3, name: 'CAM-03', location: 'Hostel Block A Lobby', status: 'active', fps: 25 },
-  { id: 4, name: 'CAM-04', location: 'Dining Hall Corridor', status: 'active', fps: 30 },
+  { id: 2, name: 'CAM-02', location: 'North Perimeter Walkway', status: 'active', fps: 25, sourceId: 2 },
+  { id: 3, name: 'CAM-03', location: 'Hostel Block A Lobby', status: 'active', fps: 25, sourceId: 3 },
+  { id: 4, name: 'CAM-04', location: 'Dining Hall Corridor', status: 'active', fps: 30, sourceId: 4 },
   { id: 5, name: 'CAM-05', location: 'Science Block Atrium', status: 'active', fps: 25 },
   { id: 6, name: 'CAM-06', location: 'Student Center Plaza', status: 'active', fps: 30 },
   { id: 7, name: 'CAM-07', location: 'Parking Area Zone C', status: 'active', fps: 25 },
@@ -184,8 +184,7 @@ export const SourcesUpload: React.FC = () => {
       <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-2.5 min-h-0 overflow-hidden">
         {currentCameras.map((cam) => {
           const liveJob = cam.sourceId ? activeJobs[cam.sourceId] : undefined;
-          const isActivelyStreaming = liveJob?.status === 'processing';
-          const hasVideo = Boolean(cam.sourceId && isActivelyStreaming && loadedStreams[cam.id]);
+          const hasVideo = Boolean(cam.sourceId && loadedStreams[cam.id]);
 
           return (
             <div
@@ -200,7 +199,7 @@ export const SourcesUpload: React.FC = () => {
               className="relative h-full w-full rounded-[12px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition"
             >
               {/* Camera Background Video or Clean No-Camera CCTV Canvas */}
-              {cam.sourceId && isActivelyStreaming ? (
+              {cam.sourceId ? (
                 <img
                   src={`/api/v1/jobs/${cam.sourceId}/stream`}
                   alt={cam.name}

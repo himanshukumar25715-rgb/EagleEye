@@ -31,7 +31,8 @@ def seed_initial_data():
     db = SessionLocal()
     try:
         # Seed default users matching Section 10.2: Admin, Operator, Viewer
-        if not db.query(User).filter(User.email == "admin@eagleeye.edu").first():
+        admin = db.query(User).filter(User.email == "admin@eagleeye.edu").first()
+        if not admin:
             admin = User(
                 name="Security Administrator",
                 email="admin@eagleeye.edu",
@@ -52,77 +53,47 @@ def seed_initial_data():
             )
             db.add_all([admin, operator, viewer])
             db.commit()
+            db.refresh(admin)
 
-            # Seed sample source & alert for initial dashboard preview
-            demo_source = Source(
-                name="Main Entrance Gate 1",
-                type="video_file",
-                location_label="Campus Gate 1 - North Boundary",
-                path_or_uri="./storage/sample_gate.mp4",
-                created_by=admin.id
-            )
-            db.add(demo_source)
-            db.commit()
-            db.refresh(demo_source)
+        # 4 Core Camera Sources with realistic CCTV footage
+        sample_cameras = [
+            (1, "Main Entrance Gate 1", "Campus Gate 1 - North Boundary", "storage/uploads/sample_gate.mp4"),
+            (2, "North Perimeter Walkway", "North Walkway - Sector B", "storage/uploads/sample_corridor.mp4"),
+            (3, "Hostel Block A Lobby", "Hostel Block A - Ground Floor", "storage/uploads/sample_hostel.mp4"),
+            (4, "Dining Hall Corridor", "Central Mess and Dining Wing", "storage/uploads/sample_hall.mp4"),
+        ]
 
-            demo_job = Job(
-                source_id=demo_source.id,
-                status="completed",
-                progress_pct=100.0,
-                processed_fps=24.5
-            )
-            db.add(demo_job)
-            db.commit()
-            db.refresh(demo_job)
+        for s_id, s_name, s_loc, s_path in sample_cameras:
+            src = db.query(Source).filter(Source.id == s_id).first()
+            if not src:
+                src = Source(
+                    id=s_id,
+                    name=s_name,
+                    type="video_file",
+                    location_label=s_loc,
+                    path_or_uri=s_path,
+                    created_by=admin.id
+                )
+                db.add(src)
+                db.commit()
+                db.refresh(src)
+            else:
+                src.name = s_name
+                src.location_label = s_loc
+                src.path_or_uri = s_path
+                db.commit()
 
-            # Sample alerts covering key types
-            a1 = Alert(
-                job_id=demo_job.id,
-                type="weapon",
-                confidence=0.89,
-                status=AlertStatus.NEW.value,
-                frame_start=120,
-                frame_end=135,
-                ts_start=4.8,
-                ts_end=5.4,
-                track_ids="TRK-104"
-            )
-            a2 = Alert(
-                job_id=demo_job.id,
-                type="unattended_object",
-                confidence=0.94,
-                status=AlertStatus.IN_REVIEW.value,
-                frame_start=340,
-                frame_end=450,
-                ts_start=13.6,
-                ts_end=18.0,
-                track_ids="BAG-022"
-            )
-            a3 = Alert(
-                job_id=demo_job.id,
-                type="overcrowding",
-                confidence=0.91,
-                status=AlertStatus.CONFIRMED.value,
-                frame_start=500,
-                frame_end=620,
-                ts_start=20.0,
-                ts_end=24.8,
-                track_ids="CRW-015"
-            )
-            a4 = Alert(
-                job_id=demo_job.id,
-                type="fight",
-                confidence=0.78,
-                status=AlertStatus.FALSE_ALARM.value,
-                frame_start=700,
-                frame_end=740,
-                ts_start=28.0,
-                ts_end=29.6,
-                track_ids="FIG-008",
-                review_note="Students greeting with handshake and hug"
-            )
-            db.add_all([a1, a2, a3, a4])
-            db.commit()
+            j = db.query(Job).filter(Job.id == s_id).first()
+            if not j:
+                j = Job(
+                    id=s_id,
+                    source_id=s_id,
+                    status="pending",
+                    progress_pct=0.0,
+                    processed_fps=0.0
+                )
+                db.add(j)
+                db.commit()
     finally:
         db.close()
 
@@ -157,10 +128,14 @@ app.include_router(analytics_router, prefix=settings.API_V1_STR)
 app.include_router(audit_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
 
-# Start automated report background scheduler
+# Start automated report background scheduler and live video processing jobs
 @app.on_event("startup")
 def on_startup():
     scheduler.start()
+    # Auto-start video processing pipeline for active camera channels
+    from app.services.job_worker import queue_video_job
+    for job_id in [1, 2, 3, 4]:
+        queue_video_job(job_id)
 
 # Real-time WebSocket endpoint (/ws/alerts)
 @app.websocket("/ws/alerts")
