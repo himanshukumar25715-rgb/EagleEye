@@ -101,7 +101,7 @@ export const VideoViewer: React.FC = () => {
     <div className="space-y-6">
       {/* Top Header & Feed Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/sources')}
             className="p-2 rounded-lg bg-brand-card border border-brand-border hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white transition"
@@ -126,7 +126,7 @@ export const VideoViewer: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Feed Selector Dropdown */}
           {allSources.length > 1 && (
             <select
@@ -145,7 +145,7 @@ export const VideoViewer: React.FC = () => {
           {/* Multi-view Grid Toggle */}
           <button
             onClick={() => setShowMatrix(!showMatrix)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 border transition ${
               showMatrix
                 ? 'bg-brand-yellow text-white border-brand-yellow font-bold'
                 : 'bg-brand-card text-brand-textMuted border-brand-border hover:text-brand-white'
@@ -159,7 +159,7 @@ export const VideoViewer: React.FC = () => {
           {currentStatus === 'processing' ? (
             <button
               onClick={handleStopAnalysis}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-brand-black text-brand-red border border-brand-red hover:bg-brand-red hover:text-brand-white flex items-center gap-1.5 transition shadow"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-brand-black text-brand-red border border-brand-red hover:bg-brand-red hover:text-brand-white flex items-center gap-2 transition shadow"
             >
               <Square className="w-3.5 h-3.5" />
               <span>Stop Video</span>
@@ -168,7 +168,7 @@ export const VideoViewer: React.FC = () => {
             <button
               onClick={handleStartAnalysis}
               disabled={isStarting}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-yellow hover:bg-brand-yellowHover text-white flex items-center gap-1.5 transition shadow"
+              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-yellow hover:bg-brand-yellowHover text-white flex items-center gap-2 transition shadow"
             >
               <Play className="w-3.5 h-3.5 fill-white" />
               <span>{currentStatus === 'completed' ? 'Re-run Analysis' : 'Start Video Analysis'}</span>
@@ -179,7 +179,7 @@ export const VideoViewer: React.FC = () => {
 
       {/* MULTI-CAMERA MATRIX VIEW (when toggled) */}
       {showMatrix && allSources.length > 1 && (
-        <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3">
+        <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-brand-white text-xs uppercase tracking-wider flex items-center gap-2">
               <Radio className="w-3.5 h-3.5 text-brand-yellow animate-pulse" />
@@ -188,7 +188,7 @@ export const VideoViewer: React.FC = () => {
             <span className="text-[11px] text-brand-textMuted">Click any feed to focus</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {allSources.map((s) => (
               <div
                 key={s.id}
@@ -205,7 +205,7 @@ export const VideoViewer: React.FC = () => {
                   alt={s.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-brand-black/90 border border-brand-border text-[10px] font-bold text-brand-white flex items-center gap-1.5">
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-brand-black/90 border border-brand-border text-[10px] font-bold text-brand-white flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow animate-pulse" />
                   <span>{s.name}</span>
                 </div>
@@ -229,8 +229,8 @@ export const VideoViewer: React.FC = () => {
             />
 
             {/* Real-time HUD Status Overlay */}
-            <div className="absolute top-4 left-4 bg-brand-darkest/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-brand-border text-xs flex items-center gap-3 shadow-lg">
-              <div className="flex items-center gap-1.5 font-mono">
+            <div className="absolute top-4 left-4 bg-brand-darkest/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-brand-border text-xs flex items-center gap-4 shadow-lg">
+              <div className="flex items-center gap-2 font-mono">
                 <span
                   className={`w-2 h-2 rounded-full ${
                     currentStatus === 'processing' ? 'bg-brand-red animate-ping' : 'bg-brand-yellow'
@@ -254,7 +254,7 @@ export const VideoViewer: React.FC = () => {
 
             {/* Completed Seekable Video Replay Banner if finished */}
             {currentStatus === 'completed' && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-brand-darkest/95 backdrop-blur-md px-4 py-2 rounded-full border border-brand-yellow/60 text-xs flex items-center gap-3">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-brand-darkest/95 backdrop-blur-md px-4 py-2 rounded-full border border-brand-yellow/60 text-xs flex items-center gap-4">
                 <CheckCircle2 className="w-4 h-4 text-brand-yellow" />
                 <span className="text-brand-white font-medium">Video Analysis Sequence Completed</span>
                 <button
@@ -268,7 +268,7 @@ export const VideoViewer: React.FC = () => {
           </div>
 
           {/* Real-time Telemetry & Pipeline Progress */}
-          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3">
+          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-4">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-brand-yellow" />
@@ -319,7 +319,7 @@ export const VideoViewer: React.FC = () => {
             </div>
 
             {/* Real-time Alert Cards Queue */}
-            <div className="flex-1 overflow-y-auto space-y-2.5 mt-3 max-h-[520px] pr-1">
+            <div className="flex-1 overflow-y-auto space-y-2 mt-3 max-h-[520px] pr-1">
               {alerts.length === 0 ? (
                 <div className="py-12 text-center text-xs text-brand-textMuted space-y-2">
                   <ShieldAlert className="w-8 h-8 text-brand-border mx-auto" />
@@ -333,7 +333,7 @@ export const VideoViewer: React.FC = () => {
                   <div
                     key={al.id}
                     onClick={() => navigate(`/alerts/${al.id}`)}
-                    className="p-3 bg-brand-darkest rounded-lg border border-brand-border hover:border-brand-yellow cursor-pointer transition space-y-1.5 group"
+                    className="p-3 bg-brand-darkest rounded-lg border border-brand-border hover:border-brand-yellow cursor-pointer transition space-y-2 group"
                   >
                     <div className="flex items-center justify-between">
                       <TypeBadge type={al.type} />
@@ -348,7 +348,7 @@ export const VideoViewer: React.FC = () => {
 
                     <div className="flex items-center justify-between text-[11px] text-brand-textMuted pt-1 border-t border-brand-border/50">
                       <span>@{al.ts_start?.toFixed(1) || '0.0'}s in footage</span>
-                      <span className="text-brand-yellow group-hover:underline flex items-center gap-0.5 font-semibold">
+                      <span className="text-brand-yellow group-hover:underline flex items-center gap-1 font-semibold">
                         Review
                         <ExternalLink className="w-2.5 h-2.5" />
                       </span>

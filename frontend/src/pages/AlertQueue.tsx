@@ -93,7 +93,7 @@ export const AlertQueue: React.FC = () => {
         </div>
         <button
           onClick={fetchAlerts}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-card hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white rounded-lg text-xs font-semibold border border-brand-border transition"
+          className="flex items-center gap-2 px-3 py-1.5 bg-brand-card hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white rounded-lg text-xs font-semibold border border-brand-border transition"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>

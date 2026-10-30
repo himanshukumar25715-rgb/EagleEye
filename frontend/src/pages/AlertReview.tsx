@@ -102,7 +102,7 @@ export const AlertReview: React.FC = () => {
           <span>Back to Alert Queue</span>
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <TypeBadge type={alert.type} />
           <StatusBadge status={alert.status} />
         </div>
@@ -201,8 +201,8 @@ export const AlertReview: React.FC = () => {
           </div>
 
           {/* Verification Decision Form */}
-          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3">
-            <h4 className="font-semibold text-brand-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-4">
+            <h4 className="font-semibold text-brand-white uppercase tracking-wider text-[11px] flex items-center gap-2">
               <FileText className="w-3.5 h-3.5 text-brand-yellow" />
               Human Operator Review
             </h4>

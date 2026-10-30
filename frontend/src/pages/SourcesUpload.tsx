@@ -170,7 +170,7 @@ export const SourcesUpload: React.FC = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">
                   Selected Files Queue ({selectedFiles.length})
                 </label>
-                <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-brand-black rounded border border-brand-border">
+                <div className="max-h-36 overflow-y-auto space-y-2 p-2 bg-brand-black rounded border border-brand-border">
                   {selectedFiles.length === 0 ? (
                     <p className="text-[11px] text-brand-textMuted italic p-1">No videos queued yet</p>
                   ) : (

@@ -72,35 +72,35 @@ export const TypeBadge: React.FC<TypeBadgeProps> = ({ type }) => {
   switch (type.toLowerCase()) {
     case 'weapon':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-brand-red text-white shadow-sm">
+        <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-bold bg-brand-red text-white shadow-sm">
           <Sword className="w-3.5 h-3.5 text-white" />
           <span>Weapon Detected</span>
         </span>
       );
     case 'fight':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-red-100 text-brand-red border border-brand-red">
+        <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-bold bg-red-100 text-brand-red border border-brand-red">
           <Flame className="w-3.5 h-3.5 text-brand-red" />
           <span>Physical Fight</span>
         </span>
       );
     case 'unattended_object':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+        <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
           <Briefcase className="w-3.5 h-3.5 text-amber-700" />
           <span>Unattended Object</span>
         </span>
       );
     case 'overcrowding':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-blue-100 text-blue-900 border border-blue-300">
+        <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-bold bg-blue-100 text-blue-900 border border-blue-300">
           <Users className="w-3.5 h-3.5 text-blue-700" />
           <span>Overcrowding Alert</span>
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-brand-card text-brand-yellow border border-brand-border">
+        <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded text-xs font-semibold bg-brand-card text-brand-yellow border border-brand-border">
           <AlertTriangle className="w-3.5 h-3.5" />
           <span>{type}</span>
         </span>
