@@ -3,31 +3,50 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --background-hsl: hsl(0 0% 100%);
-  background-color: hsl(0 0% 100%);
-  color-scheme: dark;
+  --background: hsl(0 0% 100%);
+  --brand-black: hsl(0 0% 100%);
+  --brand-darkest: hsl(0 0% 98%);
+  --brand-dark: hsl(0 0% 96%);
+  --brand-card: hsl(0 0% 100%);
+  --brand-card-hover: hsl(0 0% 95%);
+  --brand-border: hsl(0 0% 88%);
+  --brand-border-light: hsl(0 0% 80%);
+  --brand-white: hsl(0 0% 10%);
+  --brand-text-muted: hsl(0 0% 45%);
+  color-scheme: light;
 }
 
+html,
 body {
   margin: 0;
-  background-color: hsl(0 0% 100%);
-  background: hsl(0 0% 100%);
-  color: #FFFFFF;
+  padding: 0;
+  background-color: hsl(0 0% 100%) !important;
+  background: hsl(0 0% 100%) !important;
+  color: hsl(0 0% 10%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Scrollbar - Monochrome & Yellow Accent */
+#root {
+  background-color: hsl(0 0% 100%) !important;
+  background: hsl(0 0% 100%) !important;
+  min-height: 100vh;
+}
+
+.text-brand-black {
+  color: #000000 !important;
+}
+
+/* Custom Scrollbar - Light & Yellow Accent */
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A0A0A;
+  background: hsl(0 0% 96%);
 }
 ::-webkit-scrollbar-thumb {
-  background: #2E2E2E;
+  background: hsl(0 0% 80%);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {

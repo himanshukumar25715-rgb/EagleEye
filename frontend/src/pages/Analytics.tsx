@@ -14,7 +14,7 @@ import {
 import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import { apiRequest } from '../api/client';
 
-const COLORS = ['#FF3333', '#FFCC00', '#FFFFFF', '#8B0000'];
+const COLORS = ['#FF3333', '#FFCC00', '#2563EB', '#8B0000'];
 
 export const Analytics: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
@@ -157,7 +157,7 @@ export const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#181818', borderColor: '#444444', color: '#FFFFFF', borderRadius: '8px' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', borderRadius: '8px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -169,10 +169,10 @@ export const Analytics: React.FC = () => {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={hourData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2E2E2E" />
-                <XAxis dataKey="hour" stroke="#A3A3A3" fontSize={11} />
-                <YAxis stroke="#A3A3A3" fontSize={11} />
-                <Tooltip contentStyle={{ backgroundColor: '#181818', borderColor: '#444444', color: '#FFFFFF', borderRadius: '8px' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="hour" stroke="#6b7280" fontSize={11} />
+                <YAxis stroke="#6b7280" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', borderRadius: '8px' }} />
                 <Bar dataKey="count" fill="#FFCC00" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
