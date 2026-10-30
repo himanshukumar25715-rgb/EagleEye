@@ -26,18 +26,39 @@ class YOLO11SurveillancePipeline:
 
     def __init__(self, weights_path: Optional[str] = None):
         if weights_path is None:
-            custom_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_aboda_best.pt")
             default_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11n.pt")
-            if os.path.exists(custom_weights):
-                weights_path = custom_weights
-            elif os.path.exists(default_weights):
+            custom_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_aboda_best.pt")
+            if os.path.exists(default_weights):
                 weights_path = default_weights
+            elif os.path.exists(custom_weights):
+                weights_path = custom_weights
             else:
                 weights_path = "yolo11n.pt"
 
         print(f"[EagleEye YOLO11] Initializing neural network from {weights_path}...")
         self.model = YOLO(weights_path)
         self.roboflow_client = RoboflowWeaponClient()
+
+        # Dynamically map class indices according to model taxonomy (works with COCO or ABODA)
+        self.person_class_ids = set()
+        self.bag_class_ids = set()
+        self.weapon_class_ids = set()
+        for cid, cname in self.model.names.items():
+            cn = str(cname).lower()
+            if "person" in cn or "pedestrian" in cn:
+                self.person_class_ids.add(cid)
+            elif any(b in cn for b in ["bag", "backpack", "suitcase", "carrybag", "handbag", "luggage"]):
+                self.bag_class_ids.add(cid)
+            elif any(w in cn for w in ["knife", "gun", "weapon", "pistol", "scissors", "bat", "rifle", "sword"]):
+                self.weapon_class_ids.add(cid)
+
+        # Fallback to defaults if empty
+        if not self.person_class_ids:
+            self.person_class_ids = {0}
+        if not self.bag_class_ids:
+            self.bag_class_ids = {24, 26, 28}
+
+        print(f"[EagleEye YOLO11] Person classes: {self.person_class_ids}, Bag classes: {self.bag_class_ids}, Weapon classes: {self.weapon_class_ids}")
 
         # Module 1: Weapon multi-frame state: track_id -> list of bools (last 5 processed frames)
         self.weapon_history: Dict[str, List[bool]] = {}
@@ -81,13 +102,13 @@ class YOLO11SurveillancePipeline:
                 persist=True,
                 tracker="bytetrack.yaml",
                 verbose=False,
-                conf=0.25,
+                conf=0.20,
                 imgsz=640
             )
             det = results[0]
         except Exception:
             # Fallback to standard detect if tracking fails
-            results = self.model(source=frame, verbose=False, conf=0.25, imgsz=640)
+            results = self.model(source=frame, verbose=False, conf=0.20, imgsz=640)
             det = results[0]
 
         boxes = det.boxes
@@ -114,11 +135,11 @@ class YOLO11SurveillancePipeline:
                     "centroid": (cx, cy)
                 }
 
-                if cls_id == PERSON_CLASS_ID:
+                if cls_id in self.person_class_ids:
                     detected_persons.append(item_info)
-                elif cls_id in BAG_CLASS_IDS:
+                elif cls_id in self.bag_class_ids:
                     detected_bags.append(item_info)
-                elif cls_id in WEAPON_CLASS_IDS:
+                elif cls_id in self.weapon_class_ids:
                     detected_weapons.append(item_info)
 
         # Query Roboflow Serverless Workflow (CCTV Gun & Knife) every few frames or when persons exist
