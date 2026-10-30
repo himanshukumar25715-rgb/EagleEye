@@ -26,8 +26,14 @@ class YOLO11SurveillancePipeline:
 
     def __init__(self, weights_path: Optional[str] = None):
         if weights_path is None:
+            custom_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_aboda_best.pt")
             default_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11n.pt")
-            weights_path = default_weights if os.path.exists(default_weights) else "yolo11n.pt"
+            if os.path.exists(custom_weights):
+                weights_path = custom_weights
+            elif os.path.exists(default_weights):
+                weights_path = default_weights
+            else:
+                weights_path = "yolo11n.pt"
 
         print(f"[EagleEye YOLO11] Initializing neural network from {weights_path}...")
         self.model = YOLO(weights_path)
