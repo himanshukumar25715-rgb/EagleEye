@@ -40,6 +40,12 @@ export const VideoViewer: React.FC = () => {
   useEffect(() => {
     fetchJobAndAlerts();
     loadAllSources();
+
+    const interval = setInterval(() => {
+      fetchJobAndAlerts();
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, [id]);
 
   async function loadAllSources() {
@@ -89,6 +95,18 @@ export const VideoViewer: React.FC = () => {
       console.error(e);
     }
   };
+
+  // Merge loaded alerts with live alerts from WebSocket store
+  const jobAlerts = React.useMemo(() => {
+    const map = new Map<number, any>();
+    alerts.forEach((a) => map.set(a.id, a));
+    liveAlerts.forEach((la) => {
+      if (la.job_id === currentJobId || (job?.source_id && (la as any).source_id === job.source_id)) {
+        map.set(la.id, { ...map.get(la.id), ...la });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
+  }, [alerts, liveAlerts, currentJobId, job?.source_id]);
 
   const currentStatus = liveProgress?.status || job?.status || 'processing';
   const currentProgress = liveProgress?.progress_pct ?? job?.progress_pct ?? 0.0;
@@ -299,7 +317,7 @@ export const VideoViewer: React.FC = () => {
               </div>
               <div className="p-2 bg-brand-darkest rounded border border-brand-border">
                 <p className="text-[10px] text-brand-textMuted uppercase font-semibold">Incident Flags</p>
-                <p className="font-bold text-brand-white mt-0.5">{alerts.length} Flagged</p>
+                <p className="font-bold text-brand-white mt-0.5">{jobAlerts.length} Flagged</p>
               </div>
             </div>
           </div>
@@ -311,7 +329,7 @@ export const VideoViewer: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-brand-border">
               <h3 className="font-semibold text-brand-white text-xs uppercase tracking-wider flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-brand-yellow" />
-                <span>Real-Time Incident Stream ({alerts.length})</span>
+                <span>Real-Time Incident Stream ({jobAlerts.length})</span>
               </h3>
               <span className="text-[10px] bg-brand-black text-brand-red px-2 py-0.5 rounded border border-brand-red font-bold">
                 Live Feed
@@ -320,7 +338,7 @@ export const VideoViewer: React.FC = () => {
 
             {/* Real-time Alert Cards Queue */}
             <div className="flex-1 overflow-y-auto space-y-2.5 mt-3 max-h-[520px] pr-1">
-              {alerts.length === 0 ? (
+              {jobAlerts.length === 0 ? (
                 <div className="py-12 text-center text-xs text-brand-textMuted space-y-2">
                   <ShieldAlert className="w-8 h-8 text-brand-border mx-auto" />
                   <p>Surveillance video running normally.</p>
@@ -329,7 +347,7 @@ export const VideoViewer: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                alerts.map((al) => (
+                jobAlerts.map((al) => (
                   <div
                     key={al.id}
                     onClick={() => navigate(`/alerts/${al.id}`)}

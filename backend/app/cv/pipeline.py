@@ -58,6 +58,16 @@ class YOLO11SurveillancePipeline:
         if not self.bag_class_ids:
             self.bag_class_ids = {24, 26, 28}
 
+        # Check for fine-tuned deep learning fight classifier
+        fight_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_fight_best.pt")
+        self.fight_classifier = None
+        if os.path.exists(fight_weights):
+            try:
+                self.fight_classifier = YOLO(fight_weights)
+                print(f"[EagleEye CV] Deep Learning Fight Classifier loaded from {fight_weights}")
+            except Exception as e:
+                print(f"[EagleEye CV] Note: fight classifier deferred: {e}")
+
         print(f"[EagleEye YOLO11] Person classes: {self.person_class_ids}, Bag classes: {self.bag_class_ids}, Weapon classes: {self.weapon_class_ids}")
 
         # Module 1: Weapon multi-frame state: track_id -> list of bools (last 5 processed frames)
@@ -235,23 +245,52 @@ class YOLO11SurveillancePipeline:
                 if high_motion_detected:
                     break
 
-        # Leaky bucket temporal accumulator: robust to natural punch-grapple-pause cadence
+        # Deep learning classification verification if model available
+        fight_cls_conf = 0.0
+        if self.fight_classifier and scuffle_bbox is not None:
+            try:
+                pad_x = int((scuffle_bbox[2] - scuffle_bbox[0]) * 0.1)
+                pad_y = int((scuffle_bbox[3] - scuffle_bbox[1]) * 0.1)
+                x1_c = max(0, scuffle_bbox[0] - pad_x)
+                y1_c = max(0, scuffle_bbox[1] - pad_y)
+                x2_c = min(w, scuffle_bbox[2] + pad_x)
+                y2_c = min(h, scuffle_bbox[3] + pad_y)
+                crop = frame[y1_c:y2_c, x1_c:x2_c]
+                if crop.size > 0 and crop.shape[0] > 20 and crop.shape[1] > 20:
+                    cls_res = self.fight_classifier.predict(crop, imgsz=224, verbose=False)
+                    if cls_res and len(cls_res) > 0 and hasattr(cls_res[0], 'probs') and cls_res[0].probs is not None:
+                        probs = cls_res[0].probs
+                        fight_idx = None
+                        for idx, name in cls_res[0].names.items():
+                            if str(name).lower() == 'fight':
+                                fight_idx = idx
+                                break
+                        if fight_idx is not None:
+                            fight_cls_conf = float(probs.data[fight_idx].item())
+            except Exception:
+                pass
+
+        # Leaky bucket temporal accumulator boosted by deep learning verification
         if high_motion_detected:
-            self.fight_score = min(10.0, self.fight_score + 1.2)
+            boost = 1.2
+            if fight_cls_conf > 0.50:
+                boost = 2.0 + (fight_cls_conf - 0.50) * 2.0
+            self.fight_score = min(10.0, self.fight_score + boost)
         else:
             self.fight_score = max(0.0, self.fight_score - 0.4)
 
-        # Trigger alert when fight energy persists across ~1.0-1.5s window
-        if self.fight_score >= 3.6:
+        # Trigger alert when fight energy persists across ~1.0-1.5s window or high-confidence DL detection
+        if self.fight_score >= 3.6 or (fight_cls_conf >= 0.70 and scuffle_bbox is not None):
             if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
                 self.fight_cooldown = timestamp
-                calc_conf = min(0.95, round(0.72 + (self.fight_score / 10.0) * 0.23, 2))
+                calc_conf = min(0.98, max(round(fight_cls_conf, 2), round(0.75 + (self.fight_score / 10.0) * 0.22, 2)))
+                desc = f"Physical altercation / violence confirmed (Deep Learning: {int(fight_cls_conf * 100)}%)" if fight_cls_conf > 0.5 else "Physical altercation / violence detected via interpersonal collision & struggle"
                 candidate_alerts.append({
                     "type": "fight",
                     "confidence": calc_conf,
                     "track_id": "FIGHT_ENGAGE",
                     "bbox": scuffle_bbox or [0, 0, w, h],
-                    "description": "Physical altercation / violence detected via interpersonal collision & struggle"
+                    "description": desc
                 })
 
         # Update person position cache

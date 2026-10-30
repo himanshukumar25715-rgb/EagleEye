@@ -76,7 +76,7 @@ def _run_job_thread(job_id: int):
         db.commit()
 
         # Send initial WS event
-        asyncio.run(ws_manager.broadcast({
+        ws_manager.broadcast_sync({
             "event": "job.progress",
             "data": {
                 "job_id": job_id,
@@ -85,7 +85,7 @@ def _run_job_thread(job_id: int):
                 "source_name": job.source.name,
                 "location_label": job.source.location_label
             }
-        }))
+        })
 
         video_path = job.source.path_or_uri
         if not os.path.exists(video_path):
@@ -110,10 +110,10 @@ def _run_job_thread(job_id: int):
             job.status = JobStatus.FAILED.value
             job.error = f"Could not decode video file: {video_path}"
             db.commit()
-            asyncio.run(ws_manager.broadcast({
+            ws_manager.broadcast_sync({
                 "event": "job.failed",
                 "data": {"job_id": job_id, "error": job.error}
-            }))
+            })
             return
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -207,7 +207,7 @@ def _run_job_thread(job_id: int):
                 db.commit()
 
                 # Broadcast instant alert notification over WebSocket
-                asyncio.run(ws_manager.broadcast({
+                ws_manager.broadcast_sync({
                     "event": "alert.created",
                     "data": {
                         "id": new_alert.id,
@@ -219,7 +219,7 @@ def _run_job_thread(job_id: int):
                         "created_at": new_alert.created_at.isoformat(),
                         "ts_start": round(current_timestamp, 1)
                     }
-                }))
+                })
 
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
@@ -240,7 +240,7 @@ def _run_job_thread(job_id: int):
                 job.processed_fps = processed_fps
                 db.commit()
 
-                asyncio.run(ws_manager.broadcast({
+                ws_manager.broadcast_sync({
                     "event": "job.progress",
                     "data": {
                         "job_id": job_id,
@@ -250,7 +250,7 @@ def _run_job_thread(job_id: int):
                         "status": "processing",
                         "alerts_count": total_alerts_count
                     }
-                }))
+                })
 
             # Real-time CCTV Playback Pacing:
             # Pace the loop so the user watches the video run smoothly at realistic speed (~18 FPS)
@@ -268,10 +268,10 @@ def _run_job_thread(job_id: int):
             job.finished_at = datetime.utcnow()
             db.commit()
 
-            asyncio.run(ws_manager.broadcast({
+            ws_manager.broadcast_sync({
                 "event": "job.completed",
                 "data": {"job_id": job_id, "status": "completed"}
-            }))
+            })
 
     except Exception as e:
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -279,10 +279,10 @@ def _run_job_thread(job_id: int):
             job.status = JobStatus.FAILED.value
             job.error = str(e)
             db.commit()
-            asyncio.run(ws_manager.broadcast({
+            ws_manager.broadcast_sync({
                 "event": "job.failed",
                 "data": {"job_id": job_id, "error": str(e)}
-            }))
+            })
     finally:
         active_cancel_flags.pop(job_id, None)
         active_threads.pop(job_id, None)

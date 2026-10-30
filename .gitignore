@@ -62,6 +62,8 @@ backend/weights/*
 datasets/
 ABODA-master/
 aboda-dataset*/
+Fight Detection CCTV.v1i.folder/
+storage/
 *.zip
 runs/
 *.avi
