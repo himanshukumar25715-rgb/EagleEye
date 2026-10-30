@@ -88,6 +88,22 @@ def _run_job_thread(job_id: int):
         }))
 
         video_path = job.source.path_or_uri
+        if not os.path.exists(video_path):
+            candidate_paths = [
+                os.path.join(os.path.dirname(__file__), "..", "..", "..", video_path.lstrip("./\\")),
+                os.path.join(os.path.dirname(__file__), "..", "..", video_path.lstrip("./\\")),
+                os.path.join("backend", video_path.lstrip("./\\")),
+                os.path.join(settings.STORAGE_DIR, os.path.basename(video_path)),
+                os.path.join(settings.UPLOAD_DIR, os.path.basename(video_path)),
+                os.path.join(os.path.dirname(__file__), "..", "..", "storage", "uploads", os.path.basename(video_path)),
+                os.path.join("storage", "uploads", os.path.basename(video_path)),
+                os.path.join("backend", "storage", "uploads", os.path.basename(video_path))
+            ]
+            for cp in candidate_paths:
+                if os.path.exists(cp):
+                    video_path = os.path.abspath(cp)
+                    break
+
         cap = cv2.VideoCapture(video_path)
 
         if not cap.isOpened():

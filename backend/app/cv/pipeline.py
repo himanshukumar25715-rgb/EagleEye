@@ -69,6 +69,7 @@ class YOLO11SurveillancePipeline:
         self.person_positions: Dict[str, Tuple[float, float, float]] = {}
         self.fight_candidate_start: Optional[float] = None
         self.fight_cooldown: float = 0.0
+        self.fight_score: float = 0.0
 
         # Module 3: Unattended Bag state:
         # bag_id -> {"first_seen": ts, "stationary_since": ts, "last_x": x, "last_y": y}
@@ -197,7 +198,7 @@ class YOLO11SurveillancePipeline:
         scuffle_bbox = None
 
         if len(detected_persons) >= 2:
-            # Check pairwise distance and rapid velocity change
+            # Pairwise proximity, bounding-box collision & physical entanglement
             for i in range(len(detected_persons)):
                 for j in range(i + 1, len(detected_persons)):
                     p1 = detected_persons[i]
@@ -207,44 +208,51 @@ class YOLO11SurveillancePipeline:
                     dy = p1["centroid"][1] - p2["centroid"][1]
                     dist = np.sqrt(dx * dx + dy * dy)
 
-                    # Interpersonal distance < 120 px indicates physical entanglement/scuffle
-                    if dist < 120:
-                        # Check motion delta of p1 from previous frame
-                        prev1 = self.person_positions.get(p1["track_id"])
-                        if prev1:
-                            px1, py1, prev_t = prev1
-                            dt = max(0.001, timestamp - prev_t)
-                            speed1 = np.sqrt((p1["centroid"][0] - px1)**2 + (p1["centroid"][1] - py1)**2) / dt
-                            
-                            # High velocity / abrupt jerk interaction
-                            if speed1 > 280:
-                                high_motion_detected = True
-                                # Enclosing bounding box of both persons
-                                scuffle_bbox = [
-                                    min(p1["bbox"][0], p2["bbox"][0]),
-                                    min(p1["bbox"][1], p2["bbox"][1]),
-                                    max(p1["bbox"][2], p2["bbox"][2]),
-                                    max(p1["bbox"][3], p2["bbox"][3]),
-                                ]
-                                break
+                    # Dynamic scaling based on person dimensions (works in 360p, 720p, 1080p, 4K)
+                    p1_w = max(10, p1["bbox"][2] - p1["bbox"][0])
+                    p1_h = max(10, p1["bbox"][3] - p1["bbox"][1])
+                    p2_w = max(10, p2["bbox"][2] - p2["bbox"][0])
+                    p2_h = max(10, p2["bbox"][3] - p2["bbox"][1])
+                    max_prox = max(p1_w, p2_w) * 1.6
+
+                    # Bounding box intersection (direct physical contact/grappling)
+                    x_overlap = max(0, min(p1["bbox"][2], p2["bbox"][2]) - max(p1["bbox"][0], p2["bbox"][0]))
+                    y_overlap = max(0, min(p1["bbox"][3], p2["bbox"][3]) - max(p1["bbox"][1], p2["bbox"][1]))
+                    overlap_area = x_overlap * y_overlap
+
+                    # Fall down indicator (person knocked over onto ground: width > 0.85 * height)
+                    is_fallen = (p1_w > p1_h * 0.85) or (p2_w > p2_h * 0.85)
+
+                    if dist < max_prox or overlap_area > 0 or is_fallen:
+                        high_motion_detected = True
+                        scuffle_bbox = [
+                            min(p1["bbox"][0], p2["bbox"][0]),
+                            min(p1["bbox"][1], p2["bbox"][1]),
+                            max(p1["bbox"][2], p2["bbox"][2]),
+                            max(p1["bbox"][3], p2["bbox"][3]),
+                        ]
+                        break
                 if high_motion_detected:
                     break
 
+        # Leaky bucket temporal accumulator: robust to natural punch-grapple-pause cadence
         if high_motion_detected:
-            if self.fight_candidate_start is None:
-                self.fight_candidate_start = timestamp
-            elif (timestamp - self.fight_candidate_start) >= settings.FIGHT_WINDOW_SECONDS:
-                if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
-                    self.fight_cooldown = timestamp
-                    candidate_alerts.append({
-                        "type": "fight",
-                        "confidence": 0.82,
-                        "track_id": "FIGHT_ENGAGE",
-                        "bbox": scuffle_bbox or [0, 0, w, h],
-                        "description": "Physical violence/fight detected via high-motion proximity"
-                    })
+            self.fight_score = min(10.0, self.fight_score + 1.2)
         else:
-            self.fight_candidate_start = None
+            self.fight_score = max(0.0, self.fight_score - 0.4)
+
+        # Trigger alert when fight energy persists across ~1.0-1.5s window
+        if self.fight_score >= 3.6:
+            if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
+                self.fight_cooldown = timestamp
+                calc_conf = min(0.95, round(0.72 + (self.fight_score / 10.0) * 0.23, 2))
+                candidate_alerts.append({
+                    "type": "fight",
+                    "confidence": calc_conf,
+                    "track_id": "FIGHT_ENGAGE",
+                    "bbox": scuffle_bbox or [0, 0, w, h],
+                    "description": "Physical altercation / violence detected via interpersonal collision & struggle"
+                })
 
         # Update person position cache
         for p in detected_persons:
@@ -366,16 +374,16 @@ class YOLO11SurveillancePipeline:
             )
 
         # Draw Scuffle highlight if active
-        if high_motion_detected and scuffle_bbox:
+        if self.fight_score >= 2.0 and scuffle_bbox:
             sb = scuffle_bbox
-            cv2.rectangle(annotated, (sb[0], sb[1]), (sb[2], sb[3]), (0, 140, 255), 2)
+            cv2.rectangle(annotated, (sb[0], sb[1]), (sb[2], sb[3]), (0, 0, 255), 3)
             cv2.putText(
                 annotated,
-                "WARNING: HIGH MOTION SCUFFLE",
+                f"! WARNING: PHYSICAL FIGHT DETECTED ({int(self.fight_score*10)}%) !",
                 (sb[0], max(25, sb[1] - 8)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (0, 165, 255),
+                0.60,
+                (0, 0, 255),
                 2,
                 cv2.LINE_AA
             )
