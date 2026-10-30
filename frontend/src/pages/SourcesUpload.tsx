@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { VideoOff } from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 
@@ -56,6 +57,7 @@ export const SourcesUpload: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString());
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [focusedCam, setFocusedCam] = useState<CameraFeed | null>(null);
+  const [loadedStreams, setLoadedStreams] = useState<Record<number, boolean>>({});
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -218,12 +220,13 @@ export const SourcesUpload: React.FC = () => {
         {currentCameras.map((cam) => {
           const liveJob = cam.sourceId ? activeJobs[cam.sourceId] : undefined;
           const isActivelyStreaming = liveJob?.status === 'processing';
+          const hasVideo = Boolean(cam.sourceId && isActivelyStreaming && loadedStreams[cam.id]);
 
           return (
             <div
               key={cam.id}
               onClick={() => {
-                if (cam.sourceId) {
+                if (hasVideo && cam.sourceId) {
                   navigate(`/jobs/${cam.sourceId}`);
                 } else {
                   setFocusedCam(cam);
@@ -231,26 +234,39 @@ export const SourcesUpload: React.FC = () => {
               }}
               className="relative h-full w-full rounded-[12px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition"
             >
-              {/* Camera Background Video or Clean Neutral CCTV Canvas */}
-              {isActivelyStreaming ? (
+              {/* Camera Background Video or Clean No-Camera CCTV Canvas */}
+              {cam.sourceId && isActivelyStreaming ? (
                 <img
                   src={`/api/v1/jobs/${cam.sourceId}/stream`}
                   alt={cam.name}
-                  className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
+                  className={`absolute inset-0 w-full h-full object-cover transition ${
+                    hasVideo ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onLoad={() => {
+                    setLoadedStreams((prev) => ({ ...prev, [cam.id]: true }));
+                  }}
+                  onError={() => {
+                    setLoadedStreams((prev) => ({ ...prev, [cam.id]: false }));
                   }}
                 />
-              ) : (
-                <div className="absolute inset-0 bg-neutral-950 flex items-center justify-center">
+              ) : null}
+
+              {/* When there is not a video showing -> show No camera */}
+              {!hasVideo && (
+                <div className="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center p-3 select-none">
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
-                  <div className="w-10 h-10 border border-neutral-800 rounded-full flex items-center justify-center opacity-40">
-                    <div className="w-1.5 h-1.5 bg-neutral-600 rounded-full" />
+                  <div className="relative z-10 flex flex-col items-center justify-center gap-1.5">
+                    <div className="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-500 shadow-sm">
+                      <VideoOff className="w-4 h-4 text-neutral-500" />
+                    </div>
+                    <span className="text-xs font-semibold text-neutral-400 font-mono tracking-wider uppercase">
+                      No camera
+                    </span>
                   </div>
                 </div>
               )}
 
-              {/* Top HUD: Camera ID, Location & LIVE Status */}
+              {/* Top HUD: Camera ID, Location & LIVE / NO CAMERA Status */}
               <div className="relative z-10 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px] text-white">
                   <span className="font-semibold text-white">{cam.name}</span>
@@ -261,24 +277,34 @@ export const SourcesUpload: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[11px] font-mono text-white font-semibold">
-                    LIVE
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      hasVideo ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-600'
+                    }`}
+                  />
+                  <span
+                    className={`text-[11px] font-mono font-semibold ${
+                      hasVideo ? 'text-white' : 'text-neutral-400'
+                    }`}
+                  >
+                    {hasVideo ? 'LIVE' : 'NO CAMERA'}
                   </span>
                 </div>
               </div>
 
-              {/* Bottom HUD: Live Timestamp, FPS & CLEAR Status */}
+              {/* Bottom HUD: Live Timestamp, FPS & Health */}
               <div className="relative z-10 flex items-center justify-between text-[11px] font-mono">
                 <div className="bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px] text-neutral-300 font-semibold">
                   {currentTime}
                 </div>
 
                 <div className="flex items-center gap-2 bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px]">
-                  <span className="text-neutral-400 font-semibold">{cam.fps} FPS</span>
+                  <span className={hasVideo ? 'text-neutral-400 font-semibold' : 'text-neutral-500 font-semibold'}>
+                    {hasVideo ? `${cam.fps} FPS` : '-- FPS'}
+                  </span>
                   <span className="text-neutral-600">|</span>
-                  <span className="font-semibold text-emerald-400">
-                    CLEAR
+                  <span className={`font-semibold ${hasVideo ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                    {hasVideo ? 'CLEAR' : 'OFFLINE'}
                   </span>
                 </div>
               </div>
@@ -309,25 +335,38 @@ export const SourcesUpload: React.FC = () => {
             </div>
 
             <div className="relative aspect-video bg-neutral-950 flex items-center justify-center p-6">
-              <div className="text-center space-y-2">
-                <p className="text-sm font-semibold text-white">
-                  Live CCTV feed focused: {focusedCam.name}
-                </p>
-                <p className="text-xs text-neutral-400 font-semibold">
-                  Timestamp: {currentDate} {currentTime} • {focusedCam.fps} FPS
-                </p>
-                <div className="pt-2">
-                  <button
-                    onClick={() => {
-                      setFocusedCam(null);
-                      navigate(`/jobs/${focusedCam.sourceId || 1}`);
-                    }}
-                    className="px-4 py-2 bg-brand-accent hover:bg-brand-accentHover text-white rounded-[12px] text-xs font-semibold transition"
-                  >
-                    Open AI detection analyzer
-                  </button>
+              {focusedCam.sourceId && loadedStreams[focusedCam.id] ? (
+                <img
+                  src={`/api/v1/jobs/${focusedCam.sourceId}/stream`}
+                  alt={focusedCam.name}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-500 mx-auto">
+                    <VideoOff className="w-6 h-6 text-neutral-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white uppercase font-mono tracking-wider">
+                      No camera
+                    </p>
+                    <p className="text-xs text-neutral-400 font-semibold mt-1">
+                      No active video feed connected to {focusedCam.name} ({focusedCam.location})
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => {
+                        setFocusedCam(null);
+                        setShowUploadModal(true);
+                      }}
+                      className="px-4 py-2 bg-brand-accent hover:bg-brand-accentHover text-white rounded-[12px] text-xs font-semibold transition"
+                    >
+                      Upload video for this camera
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

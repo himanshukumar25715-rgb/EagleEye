@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 import { TypeBadge } from '../components/Badges';
+import { VideoOff } from 'lucide-react';
 
 export const VideoViewer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,11 +15,13 @@ export const VideoViewer: React.FC = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [showMatrix, setShowMatrix] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [streamError, setStreamError] = useState(false);
 
   const currentJobId = Number(id) || 1;
   const liveProgress = activeJobs[currentJobId];
 
   useEffect(() => {
+    setStreamError(false);
     fetchJobAndAlerts();
     loadAllSources();
   }, [id]);
@@ -188,13 +191,25 @@ export const VideoViewer: React.FC = () => {
         {/* Left 2 Cols: Live Video Stream & Player */}
         <div className="lg:col-span-2 space-y-4">
           <div className="relative aspect-video w-full rounded-[12px] bg-neutral-900 shadow-[0_0_0_1px_#e6e3dc] overflow-hidden flex items-center justify-center">
-            {/* Live MJPEG Stream with YOLO11 detection overlays */}
-            <img
-              key={`${currentJobId}-${currentStatus}`}
-              src={`/api/v1/jobs/${currentJobId}/stream`}
-              alt="Live YOLO11 CCTV Stream"
-              className="w-full h-full object-contain"
-            />
+            {/* Live MJPEG Stream or No-camera Fallback */}
+            {streamError ? (
+              <div className="flex flex-col items-center justify-center gap-2 select-none">
+                <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-400">
+                  <VideoOff className="w-6 h-6 text-neutral-400" />
+                </div>
+                <span className="text-xs font-semibold text-neutral-400 font-mono tracking-wider uppercase">
+                  No camera
+                </span>
+              </div>
+            ) : (
+              <img
+                key={`${currentJobId}-${currentStatus}`}
+                src={`/api/v1/jobs/${currentJobId}/stream`}
+                alt="Live YOLO11 CCTV Stream"
+                className="w-full h-full object-contain"
+                onError={() => setStreamError(true)}
+              />
+            )}
 
             {/* Real-time HUD Status Overlay */}
             <div className="absolute top-4 left-4 bg-white/95 px-3 py-1.5 rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] text-xs flex items-center gap-4">
