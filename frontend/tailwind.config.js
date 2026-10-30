@@ -32,7 +32,7 @@ export default {
         glow: '0 0 0 1px #e6e3dc',
       },
       colors: {
-        background: '#f5f4f0',
+        background: 'hsl(0 0% 100%)',
         accent: {
           DEFAULT: '#0047ab',
           hover: '#003888',
