@@ -67,33 +67,33 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-          <SettingsIcon className="w-6 h-6 text-campus-gold" />
+        <h2 className="text-2xl font-bold text-brand-white tracking-tight flex items-center gap-2">
+          <SettingsIcon className="w-6 h-6 text-brand-yellow" />
           <span>System & Detection Tuning</span>
         </h2>
-        <p className="text-sm text-campus-textMuted mt-1">
+        <p className="text-sm text-brand-textMuted mt-1">
           Adjust false-alarm filters, AI confidence thresholds, and storage retention policies (Admin restricted).
         </p>
       </div>
 
       {success && (
-        <div className="p-3 bg-emerald-950/70 border border-emerald-600 rounded-lg text-xs font-semibold text-emerald-300 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="p-3 bg-brand-card border border-brand-yellow rounded-lg text-xs font-bold text-brand-yellow flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-brand-yellow" />
           <span>Surveillance parameters successfully saved and propagated to CV workers!</span>
         </div>
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* CV Rules Tuning */}
-        <div className="p-5 rounded-xl bg-campus-card border border-campus-border space-y-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-campus-border pb-3">
-            <Shield className="w-4 h-4 text-campus-gold" />
+        <div className="p-5 rounded-xl bg-brand-card border border-brand-border space-y-4">
+          <h3 className="text-sm font-bold text-brand-white flex items-center gap-2 border-b border-brand-border pb-3">
+            <Shield className="w-4 h-4 text-brand-yellow" />
             Detection Rules & Verification Sensitivity (Section 9.2)
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Weapon Detection Confidence (0.30 - 0.95)
               </label>
               <input
@@ -103,26 +103,26 @@ export const SettingsPage: React.FC = () => {
                 max="0.95"
                 value={settings.weapon_confidence}
                 onChange={(e) => handleChange('weapon_confidence', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
-              <span className="text-[10px] text-campus-textMuted mt-1 block">Default: 0.50 with 3/5 multi-frame persistence</span>
+              <span className="text-[10px] text-brand-textMuted mt-1 block">Default: 0.50 with 3/5 multi-frame persistence</span>
             </div>
 
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Weapon Track Cooldown (seconds)
               </label>
               <input
                 type="number"
                 value={settings.weapon_cooldown_sec}
                 onChange={(e) => handleChange('weapon_cooldown_sec', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
-              <span className="text-[10px] text-campus-textMuted mt-1 block">Prevents re-triggering for the same person/track</span>
+              <span className="text-[10px] text-brand-textMuted mt-1 block">Prevents re-triggering for the same person/track</span>
             </div>
 
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Fight / Violence Score Threshold (0.40 - 0.90)
               </label>
               <input
@@ -130,81 +130,81 @@ export const SettingsPage: React.FC = () => {
                 step="0.05"
                 value={settings.fight_confidence}
                 onChange={(e) => handleChange('fight_confidence', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
-              <span className="text-[10px] text-campus-textMuted mt-1 block">Averaged over 2.0s temporal motion window</span>
+              <span className="text-[10px] text-brand-textMuted mt-1 block">Averaged over 2.0s temporal motion window</span>
             </div>
 
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Unattended Bag Stationary Radius (pixels)
               </label>
               <input
                 type="number"
                 value={settings.unattended_bag_radius_px}
                 onChange={(e) => handleChange('unattended_bag_radius_px', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
-              <span className="text-[10px] text-campus-textMuted mt-1 block">Radius within which person must be absent</span>
+              <span className="text-[10px] text-brand-textMuted mt-1 block">Radius within which person must be absent</span>
             </div>
 
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Unattended Bag Timeout (seconds)
               </label>
               <input
                 type="number"
                 value={settings.unattended_bag_seconds}
                 onChange={(e) => handleChange('unattended_bag_seconds', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
-              <span className="text-[10px] text-campus-textMuted mt-1 block">Default: 60s (Configurable 30s to 5m)</span>
+              <span className="text-[10px] text-brand-textMuted mt-1 block">Default: 60s (Configurable 30s to 5m)</span>
             </div>
 
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Overcrowding Zone Threshold (person count)
               </label>
               <input
                 type="number"
                 value={settings.crowd_threshold}
                 onChange={(e) => handleChange('crowd_threshold', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
-              <span className="text-[10px] text-campus-textMuted mt-1 block">Triggers if sustained for $\ge$ 10s</span>
+              <span className="text-[10px] text-brand-textMuted mt-1 block">Triggers if sustained for $\ge$ 10s</span>
             </div>
           </div>
         </div>
 
         {/* Retention Card */}
-        <div className="p-5 rounded-xl bg-campus-card border border-campus-border space-y-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-campus-border pb-3">
-            <HardDrive className="w-4 h-4 text-campus-gold" />
+        <div className="p-5 rounded-xl bg-brand-card border border-brand-border space-y-4">
+          <h3 className="text-sm font-bold text-brand-white flex items-center gap-2 border-b border-brand-border pb-3">
+            <HardDrive className="w-4 h-4 text-brand-yellow" />
             Storage & Audit Retention
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Raw Footage Retention (days)
               </label>
               <input
                 type="number"
                 value={settings.video_retention_days}
                 onChange={(e) => handleChange('video_retention_days', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
             </div>
 
             <div>
-              <label className="block text-campus-textMuted font-semibold mb-1">
+              <label className="block text-brand-textMuted font-semibold mb-1">
                 Flagged Evidence & SHA-256 Hashes Retention (days)
               </label>
               <input
                 type="number"
                 value={settings.evidence_retention_days}
                 onChange={(e) => handleChange('evidence_retention_days', e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-white"
+                className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow"
               />
             </div>
           </div>
@@ -213,7 +213,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2.5 bg-campus-gold hover:bg-campus-goldHover text-campus-darkest font-semibold rounded-lg text-sm flex items-center gap-2 shadow transition disabled:opacity-50"
+          className="px-6 py-2.5 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-extrabold rounded-lg text-sm flex items-center gap-2 shadow transition disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
           <span>{saving ? 'Saving...' : 'Save Configuration'}</span>
