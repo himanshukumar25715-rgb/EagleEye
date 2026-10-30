@@ -51,59 +51,59 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-campus-darkest p-4">
+    <div className="h-screen w-screen flex items-center justify-center bg-brand-black p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Brand */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-campus-card border border-campus-gold/30 flex items-center justify-center shadow-xl shadow-campus-gold/5">
-            <ShieldAlert className="w-8 h-8 text-campus-gold" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-card border border-brand-yellow/40 flex items-center justify-center shadow-xl shadow-brand-yellow/10">
+            <ShieldAlert className="w-8 h-8 text-brand-yellow" />
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Eagle Eye</h1>
-          <p className="text-xs text-campus-textMuted">AI-Powered College & Hostel Security System</p>
+          <h1 className="text-2xl font-extrabold text-brand-white tracking-tight">Eagle Eye</h1>
+          <p className="text-xs text-brand-textMuted font-medium">AI-Powered Surveillance Platform</p>
         </div>
 
         {/* Card */}
-        <div className="p-6 rounded-2xl bg-campus-card border border-campus-border shadow-2xl space-y-5">
-          <div className="border-b border-campus-border pb-3">
-            <h2 className="text-sm font-semibold text-white">Operator & Staff Sign In</h2>
-            <p className="text-xs text-campus-textMuted mt-0.5">Enter security clearance credentials</p>
+        <div className="p-6 rounded-2xl bg-brand-card border border-brand-border shadow-2xl space-y-5">
+          <div className="border-b border-brand-border pb-3">
+            <h2 className="text-sm font-bold text-brand-white">Operator & Staff Sign In</h2>
+            <p className="text-xs text-brand-textMuted mt-0.5">Enter security clearance credentials</p>
           </div>
 
           {error && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-lg text-xs text-red-300">
+            <div className="p-3 bg-brand-black border border-brand-red rounded-lg text-xs font-bold text-brand-red">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-campus-textMuted uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-brand-textMuted uppercase tracking-wider mb-1">
                 Institutional Email
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-campus-textMuted absolute left-3 top-3" />
+                <Mail className="w-4 h-4 text-brand-textMuted absolute left-3 top-3" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-sm text-white focus:outline-none focus:border-campus-gold"
+                  className="w-full pl-9 pr-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-sm text-brand-white focus:outline-none focus:border-brand-yellow"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-campus-textMuted uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-brand-textMuted uppercase tracking-wider mb-1">
                 Security Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-campus-textMuted absolute left-3 top-3" />
+                <Lock className="w-4 h-4 text-brand-textMuted absolute left-3 top-3" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-sm text-white focus:outline-none focus:border-campus-gold"
+                  className="w-full pl-9 pr-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-sm text-brand-white focus:outline-none focus:border-brand-yellow"
                 />
               </div>
             </div>
@@ -111,7 +111,7 @@ export const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-campus-gold hover:bg-campus-goldHover text-campus-darkest font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2 shadow"
+              className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-extrabold rounded-lg text-sm transition flex items-center justify-center gap-2 shadow"
             >
               <span>{loading ? 'Authenticating...' : 'Access Command Console'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -119,29 +119,29 @@ export const Login: React.FC = () => {
           </form>
 
           {/* Quick Demo Credentials Switcher */}
-          <div className="pt-2 border-t border-campus-border/60">
-            <p className="text-[11px] font-semibold text-campus-textMuted uppercase tracking-wider mb-2">
+          <div className="pt-2 border-t border-brand-border">
+            <p className="text-[11px] font-semibold text-brand-textMuted uppercase tracking-wider mb-2">
               Quick Role Presets (Testing)
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setPreset('admin@eagleeye.edu', 'admin123')}
-                className="py-1 px-2 text-[11px] bg-campus-darkest border border-campus-border hover:border-campus-gold rounded text-campus-gold font-medium"
+                className="py-1 px-2 text-[11px] bg-brand-darkest border border-brand-border hover:border-brand-yellow rounded text-brand-yellow font-bold"
               >
                 Admin
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('operator@eagleeye.edu', 'operator123')}
-                className="py-1 px-2 text-[11px] bg-campus-darkest border border-campus-border hover:border-campus-gold rounded text-white font-medium"
+                className="py-1 px-2 text-[11px] bg-brand-darkest border border-brand-border hover:border-brand-yellow rounded text-brand-white font-bold"
               >
                 Operator
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('viewer@eagleeye.edu', 'viewer123')}
-                className="py-1 px-2 text-[11px] bg-campus-darkest border border-campus-border hover:border-campus-gold rounded text-campus-textMuted font-medium"
+                className="py-1 px-2 text-[11px] bg-brand-darkest border border-brand-border hover:border-brand-yellow rounded text-brand-textMuted font-bold"
               >
                 Viewer
               </button>
@@ -149,7 +149,7 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-campus-textMuted">
+        <p className="text-center text-xs text-brand-textMuted">
           Ctrl+Shift+Go Security Suite • October 2026
         </p>
       </div>
