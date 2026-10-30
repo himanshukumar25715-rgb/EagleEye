@@ -26,6 +26,7 @@ def create_source(
     location_label: str = Form(...),
     source_type: str = Form("video_file"),
     rtsp_uri: Optional[str] = Form(None),
+    auto_start: bool = Form(True),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_operator)
@@ -36,7 +37,6 @@ def create_source(
         if not file:
             raise HTTPException(status_code=400, detail="Video file must be provided for video_file type")
         
-        # Security: sanitize filename and store with UUID
         ext = os.path.splitext(file.filename)[1].lower()
         if ext not in [".mp4", ".avi", ".mkv", ".mov"]:
             raise HTTPException(status_code=400, detail="Unsupported video format. Allowed: .mp4, .avi, .mkv, .mov")
@@ -64,11 +64,9 @@ def create_source(
     db.commit()
     db.refresh(source)
 
-    # Create associated processing Job
     job = Job(source_id=source.id, status=JobStatus.QUEUED.value)
     db.add(job)
     
-    # Audit log
     audit = AuditLog(
         user_id=current_user.id,
         action="upload_source",
@@ -79,8 +77,70 @@ def create_source(
     db.commit()
     db.refresh(job)
 
-    # Asynchronously dispatch to job processor
-    queue_video_job(job.id)
+    if auto_start:
+        queue_video_job(job.id)
 
     return source
 
+@router.post("/batch")
+def create_sources_batch(
+    files: List[UploadFile] = File(...),
+    location_label: str = Form("Campus Perimeter"),
+    auto_start: bool = Form(True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_operator)
+):
+    """
+    Upload one or multiple CCTV video footages simultaneously.
+    Creates a Source and Job for each file, and optionally auto-starts AI analysis.
+    """
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    created_sources = []
+
+    for idx, f in enumerate(files):
+        ext = os.path.splitext(f.filename)[1].lower()
+        if ext not in [".mp4", ".avi", ".mkv", ".mov"]:
+            continue
+
+        saved_filename = f"{uuid.uuid4().hex}{ext}"
+        saved_path = os.path.join(settings.UPLOAD_DIR, saved_filename)
+
+        with open(saved_path, "wb") as buffer:
+            shutil.copyfileobj(f.file, buffer)
+
+        # Derive a readable camera name from filename
+        clean_name = os.path.splitext(f.filename)[0].replace("_", " ").title()
+        camera_name = f"Feed {clean_name}" if "video" in clean_name.lower() else clean_name
+        camera_location = f"{location_label} - Cam {idx+1}" if len(files) > 1 else location_label
+
+        source = Source(
+            name=camera_name,
+            type="video_file",
+            location_label=camera_location,
+            path_or_uri=saved_path,
+            created_by=current_user.id
+        )
+        db.add(source)
+        db.commit()
+        db.refresh(source)
+
+        job = Job(source_id=source.id, status=JobStatus.QUEUED.value)
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+
+        if auto_start:
+            queue_video_job(job.id)
+
+        created_sources.append({
+            "source_id": source.id,
+            "job_id": job.id,
+            "name": source.name,
+            "location_label": source.location_label,
+            "status": job.status
+        })
+
+    return {
+        "message": f"Successfully ingested {len(created_sources)} CCTV footage files",
+        "sources": created_sources
+    }
