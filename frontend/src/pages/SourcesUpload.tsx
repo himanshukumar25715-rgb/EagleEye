@@ -229,7 +229,7 @@ export const SourcesUpload: React.FC = () => {
                   setFocusedCam(cam);
                 }
               }}
-              className="relative h-full w-full rounded-[12px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition hover:shadow-[0_0_0_2px_#0047ab]"
+              className="relative h-full w-full rounded-[12px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition"
             >
               {/* Camera Background Video or Clean Neutral CCTV Canvas */}
               {isActivelyStreaming ? (
