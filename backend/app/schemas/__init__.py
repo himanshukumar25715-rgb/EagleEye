@@ -148,3 +148,41 @@ class AuditLogResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+# Report Schemas
+class ReportResponse(BaseModel):
+    id: int
+    report_type: str
+    title: str
+    period_start: datetime
+    period_end: datetime
+    recipient_email: Optional[str] = None
+    status: str
+    total_alerts: int
+    summary_json: Optional[str] = None
+    html_content: Optional[str] = None
+    error_message: Optional[str] = None
+    sent_at: Optional[datetime] = None
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class SendReportRequest(BaseModel):
+    period: str = "day" # day, week, month
+    recipient_email: Optional[EmailStr] = None
+
+class ReportConfigRequest(BaseModel):
+    auto_enabled: bool
+    default_recipient: EmailStr
+    scheduled_hour: int
+    scheduled_minute: int
+
+class ReportConfigResponse(BaseModel):
+    auto_enabled: bool
+    default_recipient: str
+    scheduled_hour: int
+    scheduled_minute: int
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    from_name: str

@@ -3,9 +3,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.session import engine, Base, SessionLocal
-from app.models import User, UserRole, Source, Job, Alert, AlertStatus, Evidence
+from app.models import User, UserRole, Source, Job, Alert, AlertStatus, Evidence, Report
 from app.core.security import get_password_hash
 from app.services.websocket_manager import ws_manager
+from app.services.report_scheduler import scheduler
 
 # Import API routes
 from app.api.v1.auth import router as auth_router
@@ -17,6 +18,7 @@ from app.api.v1.settings import router as settings_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.health import router as health_router
+from app.api.v1.reports import router as reports_router
 
 # Ensure storage directories exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -101,22 +103,22 @@ def seed_initial_data():
                 type="overcrowding",
                 confidence=0.91,
                 status=AlertStatus.CONFIRMED.value,
-                frame_start=600,
-                frame_end=720,
-                ts_start=24.0,
-                ts_end=28.8,
-                track_ids="CROWD-G1"
+                frame_start=500,
+                frame_end=620,
+                ts_start=20.0,
+                ts_end=24.8,
+                track_ids="CRW-015"
             )
             a4 = Alert(
                 job_id=demo_job.id,
                 type="fight",
                 confidence=0.78,
                 status=AlertStatus.FALSE_ALARM.value,
-                frame_start=800,
-                frame_end=840,
-                ts_start=32.0,
-                ts_end=33.6,
-                track_ids="TRK-201,TRK-202",
+                frame_start=700,
+                frame_end=740,
+                ts_start=28.0,
+                ts_end=29.6,
+                track_ids="FIG-008",
                 review_note="Students greeting with handshake and hug"
             )
             db.add_all([a1, a2, a3, a4])
@@ -153,6 +155,12 @@ app.include_router(evidence_router, prefix=settings.API_V1_STR)
 app.include_router(settings_router, prefix=settings.API_V1_STR)
 app.include_router(analytics_router, prefix=settings.API_V1_STR)
 app.include_router(audit_router, prefix=settings.API_V1_STR)
+app.include_router(reports_router, prefix=settings.API_V1_STR)
+
+# Start automated report background scheduler
+@app.on_event("startup")
+def on_startup():
+    scheduler.start()
 
 # Real-time WebSocket endpoint (/ws/alerts)
 @app.websocket("/ws/alerts")
@@ -166,4 +174,3 @@ async def websocket_alerts_endpoint(websocket: WebSocket):
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
-

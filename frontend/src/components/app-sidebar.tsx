@@ -5,6 +5,7 @@ import {
   Video,
   Bell,
   BarChart3,
+  FileText,
   Settings,
   ShieldCheck,
   LogOut,
@@ -43,6 +44,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     { to: "/sources", label: "CCTV cameras", icon: Video },
     { to: "/alerts", label: "Alert queue", icon: Bell },
     { to: "/analytics", label: "Analytics", icon: BarChart3 },
+    { to: "/reports", label: "Reports", icon: FileText },
   ];
 
   const navAdmin = [

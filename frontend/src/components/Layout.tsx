@@ -33,6 +33,7 @@ export const Layout: React.FC = () => {
     if (pathname.startsWith("/alerts")) return "Alert queue";
     if (pathname.startsWith("/jobs/")) return "Live video feed";
     if (pathname.startsWith("/analytics")) return "Analytics";
+    if (pathname.startsWith("/reports")) return "Surveillance reports";
     if (pathname.startsWith("/settings")) return "Settings";
     if (pathname.startsWith("/admin")) return "Admin & audit";
     return "Dashboard";

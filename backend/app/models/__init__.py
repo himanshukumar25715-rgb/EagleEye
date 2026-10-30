@@ -30,6 +30,16 @@ class JobStatus(str, enum.Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+class ReportStatus(str, enum.Enum):
+    GENERATED = "generated"
+    SENT = "sent"
+    FAILED = "failed"
+
+class ReportType(str, enum.Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
 class User(Base):
     __tablename__ = "users"
     
@@ -129,3 +139,19 @@ class AuditLog(Base):
 
     user = relationship("User")
 
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_type = Column(String(50), nullable=False) # daily, weekly, monthly
+    title = Column(String(200), nullable=False)
+    period_start = Column(DateTime, nullable=False)
+    period_end = Column(DateTime, nullable=False)
+    recipient_email = Column(String(120), nullable=True)
+    status = Column(String(30), default="generated") # generated, sent, failed
+    total_alerts = Column(Integer, default=0)
+    summary_json = Column(Text, nullable=True)
+    html_content = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

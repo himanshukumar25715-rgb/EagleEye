@@ -1,6 +1,13 @@
 import os
+from pathlib import Path
 from typing import List
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+# Load environment variables from .env (backend directory or project root)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env")
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Eagle Eye - Campus Surveillance AI"
@@ -29,7 +36,7 @@ class Settings(BaseSettings):
     ]
     
     # Roboflow CCTV Gun & Knife Inference Workflow
-    ROBOFLOW_API_KEY: str = os.getenv("ROBOFLOW_API_KEY", "DUk7u9fEH6zkmpdD7NNw")
+    ROBOFLOW_API_KEY: str = os.getenv("ROBOFLOW_API_KEY", "")
     ROBOFLOW_WORKFLOW_URL: str = os.getenv(
         "ROBOFLOW_WORKFLOW_URL",
         "https://serverless.roboflow.com/himanshu-kumar-jfult/workflows/cctv-gun-and-knife-video-review-1793338581900"
@@ -51,8 +58,21 @@ class Settings(BaseSettings):
     CROWD_OVERCROWDING_THRESHOLD: int = 15
     CROWD_DURATION_SECONDS: int = 10
 
+    # SMTP & Automated Email Reporting (Loaded exclusively from .env)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "Eagle Eye Surveillance")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
+    REPORT_DEFAULT_RECIPIENT: str = os.getenv("REPORT_DEFAULT_RECIPIENT", "")
+    AUTO_REPORT_ENABLED: bool = os.getenv("AUTO_REPORT_ENABLED", "true").lower() in ("true", "1", "yes")
+    AUTO_REPORT_HOUR: int = int(os.getenv("AUTO_REPORT_HOUR", "23"))
+    AUTO_REPORT_MINUTE: int = int(os.getenv("AUTO_REPORT_MINUTE", "59"))
+
     class Config:
         case_sensitive = True
+        env_file = ".env"
+        extra = "allow"
 
 settings = Settings()
-
