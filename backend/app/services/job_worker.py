@@ -32,9 +32,7 @@ def get_live_frame_generator(job_id: int) -> Generator[bytes, None, None]:
             if placeholder is None:
                 import numpy as np
                 img = np.zeros((360, 640, 3), dtype=np.uint8)
-                img[:] = (14, 25, 18) # Dark green
-                cv2.putText(img, f"Eagle Eye AI - CCTV Feed #{job_id}", (140, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 215, 255), 2)
-                cv2.putText(img, "Initializing video analysis engine...", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1)
+                img[:] = (18, 18, 18)
                 _, buf = cv2.imencode(".jpg", img)
                 placeholder = buf.tobytes()
             yield (b"--frame\r\n"

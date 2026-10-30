@@ -9,16 +9,14 @@ interface CameraFeed {
   location: string;
   status: 'active' | 'analyzing' | 'standby';
   fps: number;
-  hasIncident?: boolean;
-  incidentType?: string;
   sourceId?: number;
 }
 
 const ALL_CAMERAS: CameraFeed[] = [
   // Bank 1: 1 - 9
-  { id: 1, name: 'CAM-01', location: 'Main Entrance Gate 1', status: 'analyzing', fps: 25, sourceId: 1 },
+  { id: 1, name: 'CAM-01', location: 'Main Entrance Gate 1', status: 'active', fps: 25, sourceId: 1 },
   { id: 2, name: 'CAM-02', location: 'North Perimeter Walkway', status: 'active', fps: 25 },
-  { id: 3, name: 'CAM-03', location: 'Hostel Block A Lobby', status: 'active', fps: 25, hasIncident: true, incidentType: 'Unattended object' },
+  { id: 3, name: 'CAM-03', location: 'Hostel Block A Lobby', status: 'active', fps: 25 },
   { id: 4, name: 'CAM-04', location: 'Dining Hall Corridor', status: 'active', fps: 30 },
   { id: 5, name: 'CAM-05', location: 'Science Block Atrium', status: 'active', fps: 25 },
   { id: 6, name: 'CAM-06', location: 'Student Center Plaza', status: 'active', fps: 30 },
@@ -53,7 +51,7 @@ export const SourcesUpload: React.FC = () => {
   const navigate = useNavigate();
   const { activeJobs } = useAlertStore();
 
-  const [page, setPage] = useState<number>(0); // 0 = 1-9, 1 = 10-18, 2 = 19-27
+  const [page, setPage] = useState<number>(0);
   const [sources, setSources] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString());
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -217,10 +215,9 @@ export const SourcesUpload: React.FC = () => {
 
       {/* 9 CAMERAS 3x3 GRID - 100% UN-SCROLLABLE */}
       <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-2.5 min-h-0 overflow-hidden">
-        {currentCameras.map((cam, idx) => {
-          const isRealSource = cam.sourceId && sources.some((s) => s.id === cam.sourceId);
+        {currentCameras.map((cam) => {
           const liveJob = cam.sourceId ? activeJobs[cam.sourceId] : undefined;
-          const isAnalyzing = liveJob?.status === 'processing' || cam.status === 'analyzing';
+          const isActivelyStreaming = liveJob?.status === 'processing';
 
           return (
             <div
@@ -234,41 +231,29 @@ export const SourcesUpload: React.FC = () => {
               }}
               className="relative h-full w-full rounded-[12px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition hover:shadow-[0_0_0_2px_#0047ab]"
             >
-              {/* Camera Background Video / Simulated Feed */}
-              {isRealSource ? (
+              {/* Camera Background Video or Clean Neutral CCTV Canvas */}
+              {isActivelyStreaming ? (
                 <img
                   src={`/api/v1/jobs/${cam.sourceId}/stream`}
                   alt={cam.name}
                   className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition"
                   onError={(e) => {
-                    // Fallback to simulated feed if live backend stream not playing
                     e.currentTarget.style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 flex items-center justify-center">
-                  {/* Subtle CCTV grid crosshairs simulation */}
-                  <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
-                  <div className="w-10 h-10 border border-neutral-700/60 rounded-full flex items-center justify-center opacity-40">
-                    <div className="w-1.5 h-1.5 bg-neutral-500 rounded-full" />
+                <div className="absolute inset-0 bg-neutral-950 flex items-center justify-center">
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
+                  <div className="w-10 h-10 border border-neutral-800 rounded-full flex items-center justify-center opacity-40">
+                    <div className="w-1.5 h-1.5 bg-neutral-600 rounded-full" />
                   </div>
                 </div>
               )}
 
-              {/* Simulated Bounding Box for Detected Incident */}
-              {cam.hasIncident && (
-                <div className="absolute inset-8 border border-brand-red bg-brand-red/10 rounded-[12px] flex items-start justify-between p-1.5 pointer-events-none animate-pulse">
-                  <span className="text-[10px] bg-brand-red text-white px-1.5 py-0.2 rounded font-semibold">
-                    {cam.incidentType || 'Threat flagged'}
-                  </span>
-                  <span className="text-[10px] text-white font-mono font-semibold">92%</span>
-                </div>
-              )}
-
-              {/* Top HUD: Camera ID, Location & REC Status */}
+              {/* Top HUD: Camera ID, Location & LIVE Status */}
               <div className="relative z-10 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px] text-white">
-                  <span className="font-semibold text-brand-white">{cam.name}</span>
+                  <span className="font-semibold text-white">{cam.name}</span>
                   <span className="text-neutral-400 font-semibold">•</span>
                   <span className="text-neutral-300 font-semibold truncate max-w-[130px]">
                     {cam.location}
@@ -276,20 +261,14 @@ export const SourcesUpload: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1.5 bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px]">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isAnalyzing
-                        ? 'bg-brand-red animate-ping'
-                        : 'bg-emerald-500 animate-pulse'
-                    }`}
-                  />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-[11px] font-mono text-white font-semibold">
-                    {isAnalyzing ? 'REC • AI' : 'LIVE'}
+                    LIVE
                   </span>
                 </div>
               </div>
 
-              {/* Bottom HUD: Live Timestamp, FPS & Health */}
+              {/* Bottom HUD: Live Timestamp, FPS & CLEAR Status */}
               <div className="relative z-10 flex items-center justify-between text-[11px] font-mono">
                 <div className="bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px] text-neutral-300 font-semibold">
                   {currentTime}
@@ -298,12 +277,8 @@ export const SourcesUpload: React.FC = () => {
                 <div className="flex items-center gap-2 bg-black/75 backdrop-blur-sm px-2 py-0.5 rounded-[12px]">
                   <span className="text-neutral-400 font-semibold">{cam.fps} FPS</span>
                   <span className="text-neutral-600">|</span>
-                  <span
-                    className={`font-semibold ${
-                      cam.hasIncident ? 'text-brand-red' : 'text-emerald-400'
-                    }`}
-                  >
-                    {cam.hasIncident ? 'FLAGGED' : 'CLEAR'}
+                  <span className="font-semibold text-emerald-400">
+                    CLEAR
                   </span>
                 </div>
               </div>
