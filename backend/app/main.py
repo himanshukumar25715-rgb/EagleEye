@@ -143,6 +143,7 @@ app.add_middleware(
 
 # Mount REST Routers
 app.include_router(health_router, prefix="")
+app.include_router(health_router, prefix=settings.API_V1_STR)
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(sources_router, prefix=settings.API_V1_STR)
 app.include_router(jobs_router, prefix=settings.API_V1_STR)
