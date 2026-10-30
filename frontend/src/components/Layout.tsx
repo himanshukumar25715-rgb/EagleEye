@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useAlertStore } from '../stores/alertStore';
+import { AudioAlertToggle } from './AudioAlertToggle';
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -137,8 +138,11 @@ export const Layout: React.FC = () => {
             <span>•</span>
             <span className="text-brand-yellow font-bold">CCTV Threat Intelligence</span>
           </div>
-          <div className="text-xs bg-brand-card px-3 py-1 rounded border border-brand-border text-brand-textMuted">
-            Security Node: <span className="text-brand-white font-bold">Perimeter & Corridor Hub</span>
+          <div className="flex items-center gap-3">
+            <AudioAlertToggle />
+            <div className="text-xs bg-brand-card px-3 py-1 rounded border border-brand-border text-brand-textMuted">
+              Security Node: <span className="text-brand-white font-bold">Perimeter & Corridor Hub</span>
+            </div>
           </div>
         </header>
 

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
+import { audioAlert } from '../utils/audioAlert';
 import { StatusBadge, TypeBadge } from '../components/Badges';
 
 export const VideoViewer: React.FC = () => {
@@ -33,6 +34,7 @@ export const VideoViewer: React.FC = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [showMatrix, setShowMatrix] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const knownAlertIdsRef = React.useRef<Set<number>>(new Set());
 
   const currentJobId = Number(id) || 1;
   const liveProgress = activeJobs[currentJobId];
@@ -61,7 +63,22 @@ export const VideoViewer: React.FC = () => {
     try {
       const jobData = await apiRequest<any>(`/jobs/${currentJobId}`);
       setJob(jobData);
-      const alertsData = await apiRequest<any[]>(`/alerts?source_id=${jobData.source_id || currentJobId}`);
+      const alertsData = await apiRequest<any[]>(`/alerts?job_id=${currentJobId}`);
+      
+      // Play audible security alarm when a new incident is detected
+      if (alertsData && alertsData.length > 0) {
+        let hasNewlyDetected = false;
+        alertsData.forEach((a: any) => {
+          if (!knownAlertIdsRef.current.has(a.id)) {
+            knownAlertIdsRef.current.add(a.id);
+            hasNewlyDetected = true;
+          }
+        });
+        if (hasNewlyDetected && alerts.length > 0) {
+          audioAlert.playAlertSound(alertsData[0]?.type || 'fight');
+        }
+      }
+
       setAlerts(alertsData);
     } catch {
       setJob({

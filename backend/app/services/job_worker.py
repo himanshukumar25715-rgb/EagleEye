@@ -221,6 +221,13 @@ def _run_job_thread(job_id: int):
                     }
                 })
 
+                # Play non-blocking OS audio alert sound upon incident transmission
+                try:
+                    import winsound
+                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                except Exception:
+                    pass
+
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
             elapsed = max(0.001, time.time() - start_time)
