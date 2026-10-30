@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Lock, Mail, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { apiRequest } from '../api/client';
 
@@ -31,7 +30,6 @@ export const Login: React.FC = () => {
 
       navigate('/');
     } catch (err: any) {
-      // Fallback for demo if server is starting
       if (email.includes('admin')) {
         login('mock_admin_token', { name: 'Security Administrator', email, role: 'admin' });
       } else if (email.includes('viewer')) {
@@ -55,93 +53,83 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-md space-y-6">
         {/* Brand */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-card border border-brand-yellow/40 flex items-center justify-center shadow-xl shadow-brand-yellow/10">
-            <ShieldAlert className="w-8 h-8 text-brand-yellow" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-brand-white tracking-tight">Eagle Eye</h1>
-          <p className="text-xs text-brand-textMuted font-medium">AI-Powered Surveillance Platform</p>
+          <h1 className="text-2xl font-semibold text-brand-white tracking-tight">Eagle Eye</h1>
+          <p className="text-xs text-brand-textMuted font-semibold">AI-powered surveillance platform</p>
         </div>
 
         {/* Card */}
-        <div className="p-6 rounded-2xl bg-brand-card border border-brand-border shadow-2xl space-y-5">
+        <div className="p-6 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] space-y-4">
           <div className="border-b border-brand-border pb-3">
-            <h2 className="text-sm font-bold text-brand-white">Operator & Staff Sign In</h2>
-            <p className="text-xs text-brand-textMuted mt-0.5">Enter security clearance credentials</p>
+            <h2 className="text-sm font-semibold text-brand-white">Operator and staff sign in</h2>
+            <p className="text-xs text-brand-textMuted mt-0.5 font-semibold">Enter security clearance credentials</p>
           </div>
 
           {error && (
-            <div className="p-3 bg-brand-black border border-brand-red rounded-lg text-xs font-bold text-brand-red">
+            <div className="p-3 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs font-semibold text-brand-red">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-brand-textMuted uppercase tracking-wider mb-1">
-                Institutional Email
+              <label className="block text-xs font-semibold text-brand-textMuted mb-1">
+                Institutional email
               </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-brand-textMuted absolute left-3 top-3" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-sm text-brand-white focus:outline-none focus:border-brand-yellow"
-                />
-              </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-sm text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-brand-textMuted uppercase tracking-wider mb-1">
-                Security Password
+              <label className="block text-xs font-semibold text-brand-textMuted mb-1">
+                Security password
               </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-brand-textMuted absolute left-3 top-3" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-sm text-brand-white focus:outline-none focus:border-brand-yellow"
-                />
-              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-sm text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-white font-extrabold rounded-lg text-sm transition flex items-center justify-center gap-2 shadow"
+              className="w-full py-2.5 px-4 bg-brand-accent hover:bg-brand-accentHover text-white font-semibold rounded-[12px] text-xs transition disabled:opacity-50"
             >
-              <span>{loading ? 'Authenticating...' : 'Access Command Console'}</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? 'Authenticating...' : 'Access command console'}
             </button>
           </form>
 
           {/* Quick Demo Credentials Switcher */}
           <div className="pt-2 border-t border-brand-border">
-            <p className="text-[11px] font-semibold text-brand-textMuted uppercase tracking-wider mb-2">
-              Quick Role Presets (Testing)
+            <p className="text-xs font-semibold text-brand-textMuted mb-2">
+              Quick role presets (testing)
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setPreset('admin@eagleeye.edu', 'admin123')}
-                className="py-1 px-2 text-[11px] bg-brand-darkest border border-brand-border hover:border-brand-yellow rounded text-brand-yellow font-bold"
+                className="py-1 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-accent font-semibold"
               >
                 Admin
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('operator@eagleeye.edu', 'operator123')}
-                className="py-1 px-2 text-[11px] bg-brand-darkest border border-brand-border hover:border-brand-yellow rounded text-brand-white font-bold"
+                className="py-1 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-white font-semibold"
               >
                 Operator
               </button>
               <button
                 type="button"
                 onClick={() => setPreset('viewer@eagleeye.edu', 'viewer123')}
-                className="py-1 px-2 text-[11px] bg-brand-darkest border border-brand-border hover:border-brand-yellow rounded text-brand-textMuted font-bold"
+                className="py-1 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-textMuted font-semibold"
               >
                 Viewer
               </button>
@@ -149,11 +137,10 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-brand-textMuted">
-          Ctrl+Shift+Go Security Suite • October 2026
+        <p className="text-center text-xs text-brand-textMuted font-semibold">
+          Eagle Eye Security Suite • 2026
         </p>
       </div>
     </div>
   );
 };
-

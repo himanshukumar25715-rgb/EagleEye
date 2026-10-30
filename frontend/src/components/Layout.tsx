@@ -1,10 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { X, AlertTriangle } from 'lucide-react';
+import { 
+  PanelLeftClose, 
+  PanelLeftOpen,
+  LayoutDashboard, 
+  Video, 
+  Bell, 
+  BarChart3, 
+  Settings, 
+  ShieldCheck, 
+  LogOut,
+  X 
+} from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useAlertStore } from '../stores/alertStore';
 
 export const Layout: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthStore();
   const { wsConnected, initWebSocket, toasts, removeToast } = useAlertStore();
   const navigate = useNavigate();
@@ -14,12 +26,12 @@ export const Layout: React.FC = () => {
   }, [initWebSocket]);
 
   const navItems = [
-    { to: '/', label: 'Dashboard' },
-    { to: '/sources', label: 'Sources & Upload' },
-    { to: '/alerts', label: 'Alert Queue' },
-    { to: '/analytics', label: 'Analytics' },
-    { to: '/settings', label: 'Settings', adminOnly: true },
-    { to: '/admin', label: 'Admin & Audit', adminOnly: true },
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/sources', label: 'Sources & upload', icon: Video },
+    { to: '/alerts', label: 'Alert queue', icon: Bell },
+    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
+    { to: '/admin', label: 'Admin & audit', icon: ShieldCheck, adminOnly: true },
   ];
 
   const handleLogout = () => {
@@ -28,21 +40,22 @@ export const Layout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-brand-black text-brand-white">
+    <div className="flex h-screen w-screen overflow-hidden bg-brand-black text-brand-white font-sans">
       {/* Toast notifications */}
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-center justify-between gap-4 p-3 bg-brand-darkest border-2 border-brand-red rounded-lg shadow-2xl text-sm backdrop-blur-md"
+            className="pointer-events-auto flex items-center justify-between gap-4 p-4 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-sm font-semibold"
           >
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-brand-yellow flex-shrink-0" />
-              <span className="font-bold text-brand-white">{toast.message}</span>
+              <span className="w-2 h-2 rounded-full bg-brand-red"></span>
+              <span className="text-brand-white text-xs">{toast.message}</span>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-brand-textMuted hover:text-brand-white"
+              className="text-brand-textMuted hover:text-brand-white transition"
+              title="Dismiss"
             >
               <X className="w-4 h-4" />
             </button>
@@ -50,73 +63,123 @@ export const Layout: React.FC = () => {
         ))}
       </div>
 
-      {/* Sidebar - Plain Text Labels */}
-      <aside className="w-64 flex flex-col bg-brand-dark border-r border-brand-border">
+      {/* Sidebar - Collapsible with Lucide icons on collapse */}
+      <aside 
+        className={`${
+          collapsed ? 'w-16' : 'w-64'
+        } flex flex-col bg-brand-card shadow-[0_0_0_1px_#e6e3dc] transition-all duration-200 z-20 flex-shrink-0`}
+      >
         {/* Brand */}
-        <div className="p-5 border-b border-brand-border">
-          <h1 className="font-extrabold text-lg text-brand-white tracking-tight">Eagle Eye</h1>
-          <p className="text-xs text-[#0047ab] font-bold tracking-wide">SURVEILLANCE AI</p>
+        <div className="h-14 px-4 border-b border-brand-border flex items-center justify-between">
+          {!collapsed ? (
+            <div>
+              <h1 className="font-semibold text-xl text-brand-white tracking-tight">Eagle Eye</h1>
+              <p className="text-xs text-brand-accent font-semibold">Surveillance AI</p>
+            </div>
+          ) : (
+            <div className="w-full flex justify-center">
+              <span className="font-semibold text-xl text-brand-accent">EE</span>
+            </div>
+          )}
         </div>
 
         {/* Live System Status Pill */}
-        <div className="px-5 py-3 border-b border-brand-border flex items-center justify-between text-xs">
-          <span className="text-brand-textMuted">Live Event Stream:</span>
-          <span className={`font-mono font-bold ${wsConnected ? 'text-[#0047ab]' : 'text-brand-red'}`}>
-            {wsConnected ? 'ACTIVE' : 'OFFLINE'}
-          </span>
-        </div>
+        {!collapsed && (
+          <div className="px-4 py-3 border-b border-brand-border flex items-center justify-between text-xs">
+            <span className="text-brand-textMuted font-semibold">Live event stream:</span>
+            <span className={`font-semibold ${wsConnected ? 'text-brand-accent' : 'text-brand-red'}`}>
+              {wsConnected ? 'Active' : 'Offline'}
+            </span>
+          </div>
+        )}
 
-        {/* Navigation Links - Plain Text Labels (No Icons) */}
-        <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
+        {/* Navigation Links */}
+        <nav className="flex-1 p-2 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
             if (item.adminOnly && user?.role !== 'admin') return null;
+            const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
+                title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
-                  `block px-3.5 py-2.5 rounded-lg text-sm transition-all ${
+                  `flex items-center rounded-[12px] transition-all ${
+                    collapsed ? 'justify-center p-3' : 'px-4 py-2.5 text-sm font-semibold'
+                  } ${
                     isActive
-                      ? 'bg-brand-yellow text-white shadow-sm font-bold'
-                      : 'text-brand-textMuted hover:bg-brand-card hover:text-brand-white font-medium'
+                      ? 'bg-brand-accent text-white shadow-sm'
+                      : 'text-brand-textMuted hover:bg-brand-cardHover hover:text-brand-white'
                   }`
                 }
               >
-                {item.label}
+                {collapsed ? (
+                  <Icon className="w-5 h-5" />
+                ) : (
+                  <span>{item.label}</span>
+                )}
               </NavLink>
             );
           })}
         </nav>
 
         {/* User Card & Logout */}
-        <div className="p-4 border-t border-brand-border bg-brand-black flex items-center justify-between">
-          <div className="truncate pr-2">
-            <p className="text-sm font-bold truncate text-brand-white">{user?.name || 'Operator'}</p>
-            <span className="inline-block px-2 py-0.5 mt-0.5 text-[10px] font-bold uppercase rounded bg-[#0047ab]/10 text-[#0047ab] border border-[#0047ab]/30">
-              {user?.role || 'Viewer'}
-            </span>
-          </div>
-          <button
-            onClick={handleLogout}
-            title="Log Out"
-            className="px-2.5 py-1.5 rounded-md hover:bg-brand-card text-brand-textMuted hover:text-brand-red text-xs font-semibold transition"
-          >
-            Log Out
-          </button>
+        <div className="p-3 border-t border-brand-border bg-brand-card">
+          {!collapsed ? (
+            <div className="flex items-center justify-between gap-2">
+              <div className="truncate pr-1">
+                <p className="text-xs font-semibold truncate text-brand-white">{user?.name || 'Operator'}</p>
+                <span className="text-xs text-brand-textMuted capitalize">
+                  {user?.role || 'Viewer'}
+                </span>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Log out"
+                className="px-2.5 py-1.5 rounded-[12px] hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-red text-xs font-semibold transition"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              className="w-full flex items-center justify-center p-2 rounded-[12px] hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-red transition"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden bg-brand-black">
-        <header className="h-14 border-b border-brand-border bg-brand-dark px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-brand-textMuted">
-            <span className="font-semibold text-brand-white">Eagle Eye 2.0</span>
-            <span>•</span>
-            <span className="text-brand-yellow font-bold">CCTV Threat Intelligence</span>
+        {/* Navbar Header with Sidebar Close/Collapse Button */}
+        <header className="h-14 shadow-[0_0_0_1px_#e6e3dc] bg-brand-card px-4 flex items-center justify-between z-10">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? 'Expand sidebar' : 'Close sidebar'}
+              className="p-2 rounded-[12px] text-brand-textMuted hover:text-brand-white hover:bg-brand-cardHover transition"
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="w-5 h-5" />
+              ) : (
+                <PanelLeftClose className="w-5 h-5" />
+              )}
+            </button>
+
+            <div className="flex items-center gap-2 text-xs text-brand-textMuted font-semibold">
+              <span className="text-brand-white">Eagle Eye 2.0</span>
+              <span>•</span>
+              <span className="text-brand-accent">CCTV threat intelligence</span>
+            </div>
           </div>
-          <div className="text-xs bg-brand-card px-3 py-1 rounded border border-brand-border text-brand-textMuted">
-            Security Node: <span className="text-brand-white font-bold">Perimeter & Corridor Hub</span>
+
+          <div className="text-xs px-3 py-1.5 rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] bg-brand-card text-brand-textMuted font-semibold">
+            Security node: <span className="text-brand-white">Perimeter & corridor hub</span>
           </div>
         </header>
 

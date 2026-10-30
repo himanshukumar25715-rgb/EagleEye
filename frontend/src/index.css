@@ -9,8 +9,8 @@
   --brand-dark: #ebe9e1;
   --brand-card: #ffffff;
   --brand-card-hover: #faf9f6;
-  --brand-border: #e2dfd5;
-  --brand-border-light: #d6d2c4;
+  --brand-border: #e6e3dc;
+  --brand-border-light: #e6e3dc;
   --brand-white: #14171a;
   --brand-text-muted: #5e6472;
   --brand-accent: #0047ab;
@@ -26,7 +26,8 @@ body {
   background-color: #f5f4f0 !important;
   background: #f5f4f0 !important;
   color: #14171a;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -34,19 +35,21 @@ body {
   background-color: #f5f4f0 !important;
   background: #f5f4f0 !important;
   min-height: 100vh;
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
 }
 
-/* Custom Scrollbar - Warm Alabaster & Cobalt Blue Accent */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: #ebe9e1;
 }
 ::-webkit-scrollbar-thumb {
   background: #d6d2c4;
-  border-radius: 4px;
+  border-radius: 12px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #0047ab;

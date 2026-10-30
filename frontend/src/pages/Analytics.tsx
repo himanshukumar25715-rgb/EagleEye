@@ -11,10 +11,9 @@ import {
   Pie, 
   Cell 
 } from 'recharts';
-import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import { apiRequest } from '../api/client';
 
-const COLORS = ['#FF3333', '#FFCC00', '#2563EB', '#8B0000'];
+const COLORS = ['#dc2626', '#0047ab', '#b45309', '#15803d'];
 
 export const Analytics: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
@@ -57,11 +56,11 @@ export const Analytics: React.FC = () => {
   }, []);
 
   if (loading || !summary) {
-    return <div className="text-sm text-brand-textMuted">Loading security intelligence metrics...</div>;
+    return <div className="text-xs text-brand-textMuted font-semibold">Loading security intelligence metrics...</div>;
   }
 
   const typeData = Object.entries(summary.alerts_by_type || {}).map(([name, value]) => ({
-    name: name.replace('_', ' ').toUpperCase(),
+    name: name.replace('_', ' '),
     value: Number(value),
   }));
 
@@ -70,76 +69,55 @@ export const Analytics: React.FC = () => {
     count: Number(count),
   }));
 
-  const sourceData = Object.entries(summary.alerts_by_source || {}).map(([src, count]) => ({
-    source: src,
-    count: Number(count),
-  }));
-
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-brand-white tracking-tight flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-brand-yellow" />
-          <span>Surveillance Intelligence & Analytics</span>
+        <h2 className="text-2xl font-semibold text-brand-white tracking-tight">
+          Surveillance intelligence and analytics
         </h2>
-        <p className="text-sm text-brand-textMuted mt-1">
+        <p className="text-xs text-brand-textMuted mt-1">
           Historical incident trends, AI model false-alarm metrics, and response benchmarks.
         </p>
       </div>
 
       {/* Top Benchmark KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-brand-textMuted uppercase tracking-wider">
-              Avg Operator Response Time
-            </p>
-            <p className="text-2xl font-extrabold text-brand-white mt-1">
-              {summary.avg_review_time_mins} mins
-            </p>
-            <span className="text-[11px] text-brand-yellow font-medium">Within 5m campus SLA</span>
-          </div>
-          <div className="p-3 bg-brand-dark rounded-lg text-brand-yellow border border-brand-border">
-            <Clock className="w-5 h-5" />
-          </div>
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc]">
+          <p className="text-xs font-semibold text-brand-textMuted">
+            Avg operator response time
+          </p>
+          <p className="text-2xl font-semibold text-brand-white mt-1">
+            {summary.avg_review_time_mins} mins
+          </p>
+          <span className="text-xs text-brand-accent font-semibold">Within 5m campus SLA</span>
         </div>
 
-        <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-brand-textMuted uppercase tracking-wider">
-              Model Precision / False Alarm Rate
-            </p>
-            <p className="text-2xl font-extrabold text-brand-yellow mt-1">
-              {summary.false_alarm_rate}%
-            </p>
-            <span className="text-[11px] text-brand-textMuted">Filtered via multi-frame rules</span>
-          </div>
-          <div className="p-3 bg-brand-dark rounded-lg text-brand-yellow border border-brand-border">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc]">
+          <p className="text-xs font-semibold text-brand-textMuted">
+            Model precision / false alarm rate
+          </p>
+          <p className="text-2xl font-semibold text-brand-accent mt-1">
+            {summary.false_alarm_rate}%
+          </p>
+          <span className="text-xs text-brand-textMuted font-semibold">Filtered via multi-frame rules</span>
         </div>
 
-        <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-brand-textMuted uppercase tracking-wider">
-              Total Verified Incidents
-            </p>
-            <p className="text-2xl font-extrabold text-brand-white mt-1">
-              {summary.confirmed_alerts}
-            </p>
-            <span className="text-[11px] text-brand-yellow font-medium">Logged & hashed for audit</span>
-          </div>
-          <div className="p-3 bg-brand-dark rounded-lg text-brand-white border border-brand-border">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc]">
+          <p className="text-xs font-semibold text-brand-textMuted">
+            Total verified incidents
+          </p>
+          <p className="text-2xl font-semibold text-brand-white mt-1">
+            {summary.confirmed_alerts}
+          </p>
+          <span className="text-xs text-brand-accent font-semibold">Logged and hashed for audit</span>
         </div>
       </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Alerts by Type (Pie Chart) */}
-        <div className="p-5 rounded-xl bg-brand-card border border-brand-border">
-          <h3 className="text-sm font-semibold text-brand-white mb-4">Incidents by Event Classification</h3>
+        {/* Alerts by Type */}
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc]">
+          <h3 className="text-sm font-semibold text-brand-white mb-4">Incidents by event classification</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -157,23 +135,23 @@ export const Analytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', borderRadius: '8px' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e6e3dc', color: '#14171a', borderRadius: '12px', fontSize: '12px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Hourly Distribution (Bar Chart) */}
-        <div className="p-5 rounded-xl bg-brand-card border border-brand-border">
-          <h3 className="text-sm font-semibold text-brand-white mb-4">Peak Activity by Hour</h3>
+        {/* Hourly Distribution */}
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc]">
+          <h3 className="text-sm font-semibold text-brand-white mb-4">Peak activity by hour</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={hourData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="hour" stroke="#6b7280" fontSize={11} />
-                <YAxis stroke="#6b7280" fontSize={11} />
-                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', borderRadius: '8px' }} />
-                <Bar dataKey="count" fill="#0047ab" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6e3dc" />
+                <XAxis dataKey="hour" stroke="#5e6472" fontSize={12} />
+                <YAxis stroke="#5e6472" fontSize={12} />
+                <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e6e3dc', color: '#14171a', borderRadius: '12px', fontSize: '12px' }} />
+                <Bar dataKey="count" fill="#0047ab" radius={[12, 12, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

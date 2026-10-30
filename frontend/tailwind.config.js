@@ -7,6 +7,30 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Instrument Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+      },
+      fontSize: {
+        xs: ['12px', { lineHeight: '16px' }],
+        sm: ['14px', { lineHeight: '20px' }],
+        xl: ['20px', { lineHeight: '28px' }],
+        '2xl': ['32px', { lineHeight: '40px' }],
+        '3xl': ['32px', { lineHeight: '40px' }],
+      },
+      borderRadius: {
+        DEFAULT: '12px',
+        sm: '8px',
+        md: '12px',
+        lg: '12px',
+        xl: '12px',
+        '2xl': '12px',
+        full: '9999px',
+      },
+      boxShadow: {
+        DEFAULT: '0 0 0 1px #e6e3dc',
+        card: '0 0 0 1px #e6e3dc',
+        glow: '0 0 0 1px #e6e3dc',
+      },
       colors: {
         background: '#f5f4f0',
         accent: {
@@ -35,21 +59,6 @@ export default {
           redHover: '#b91c1c',
           redDark: '#991b1b',
         },
-        campus: {
-          black: '#000000',
-          darkest: '#0A0A0A',
-          dark: '#121212',
-          card: '#181818',
-          cardHover: '#222222',
-          border: '#2E2E2E',
-          borderLight: '#444444',
-          white: '#FFFFFF',
-          textMuted: '#A3A3A3',
-          gold: '#FFCC00',
-          goldHover: '#FFD633',
-          red: '#FF3333',
-          redHover: '#FF4D4D',
-        }
       }
     },
   },

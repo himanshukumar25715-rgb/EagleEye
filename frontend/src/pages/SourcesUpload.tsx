@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  UploadCloud, 
-  Video, 
-  Play, 
-  Plus, 
-  X, 
-  Layers, 
-  CheckCircle2, 
-  AlertCircle, 
-  Eye
-} from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 
@@ -99,46 +88,39 @@ export const SourcesUpload: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-extrabold text-brand-white tracking-tight flex items-center gap-2">
-            <UploadCloud className="w-6 h-6 text-brand-yellow" />
-            <span>CCTV Video Ingestion & Real-Time Analytics</span>
+          <h2 className="text-2xl font-semibold text-brand-white tracking-tight">
+            CCTV video ingestion and analytics
           </h2>
-          <p className="text-sm text-brand-textMuted mt-1">
-            Upload CCTV footage. Start video analysis to run live detection while playback runs.
+          <p className="text-xs text-brand-textMuted mt-1">
+            Upload CCTV footage and start real-time threat detection playback.
           </p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-3 bg-brand-darkest border-2 border-brand-white rounded-lg text-xs font-bold text-brand-white flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-brand-yellow" />
-          <span>{successMsg}</span>
+        <div className="p-4 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs font-semibold text-brand-accent">
+          {successMsg}
         </div>
       )}
 
       {error && (
-        <div className="p-3 bg-brand-black border-2 border-brand-red rounded-lg text-xs font-bold text-brand-red flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs font-semibold text-brand-red">
+          {error}
         </div>
       )}
 
       {/* Upload & Dropzone Card */}
-      <div className="p-6 rounded-xl bg-brand-card border border-brand-border">
+      <div className="p-6 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Dropzone Area */}
-          <div className="md:col-span-2 border-2 border-dashed border-brand-border hover:border-brand-yellow rounded-xl p-8 flex flex-col items-center justify-center text-center bg-brand-black transition">
-            <div className="w-14 h-14 rounded-2xl bg-brand-card border border-brand-yellow flex items-center justify-center text-brand-yellow mb-3">
-              <UploadCloud className="w-7 h-7" />
-            </div>
-            <h4 className="font-bold text-brand-white text-base">Select or Drop CCTV Video Footage</h4>
-            <p className="text-xs text-brand-textMuted mt-1 max-w-sm">
+          <div className="md:col-span-2 border-2 border-dashed border-brand-border hover:border-brand-accent rounded-[12px] p-8 flex flex-col items-center justify-center text-center bg-brand-card transition">
+            <h4 className="font-semibold text-brand-white text-xl">Select or drop CCTV video footage</h4>
+            <p className="text-xs text-brand-textMuted mt-1 max-w-sm font-semibold">
               Supports single or multiple video files (.mp4, .avi, .mkv).
             </p>
 
-            <label className="mt-4 px-4 py-2 bg-brand-yellow hover:bg-brand-yellowHover text-white font-extrabold text-xs rounded cursor-pointer shadow transition flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span>Browse CCTV Videos</span>
+            <label className="mt-4 px-4 py-2 bg-brand-accent hover:bg-brand-accentHover text-white font-semibold text-xs rounded-[12px] cursor-pointer transition">
+              <span>Browse CCTV videos</span>
               <input
                 type="file"
                 multiple
@@ -153,39 +135,36 @@ export const SourcesUpload: React.FC = () => {
           <div className="space-y-4 flex flex-col justify-between">
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">
-                  Campus Zone / Camera Location
+                <label className="block text-xs font-semibold text-brand-textMuted mb-1">
+                  Campus zone / camera location
                 </label>
                 <input
                   type="text"
                   value={locationLabel}
                   onChange={(e) => setLocationLabel(e.target.value)}
                   placeholder="e.g. North Gate & Hostel Corridor"
-                  className="w-full px-3 py-2 bg-brand-black border border-brand-border rounded text-xs text-brand-white focus:outline-none focus:border-brand-yellow"
+                  className="w-full px-3 py-2 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
                 />
               </div>
 
               {/* Selected Files Chip List */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">
-                  Selected Files Queue ({selectedFiles.length})
+                <label className="block text-xs font-semibold text-brand-textMuted mb-1">
+                  Selected files queue ({selectedFiles.length})
                 </label>
-                <div className="max-h-36 overflow-y-auto space-y-2 p-2 bg-brand-black rounded border border-brand-border">
+                <div className="max-h-36 overflow-y-auto space-y-2 p-2 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc]">
                   {selectedFiles.length === 0 ? (
-                    <p className="text-[11px] text-brand-textMuted italic p-1">No videos queued yet</p>
+                    <p className="text-xs text-brand-textMuted font-semibold p-1">No videos queued yet</p>
                   ) : (
                     selectedFiles.map((f, i) => (
-                      <div key={i} className="flex items-center justify-between p-1.5 bg-brand-card rounded text-xs border border-brand-border">
-                        <div className="flex items-center gap-2 truncate pr-2">
-                          <Video className="w-3.5 h-3.5 text-brand-yellow flex-shrink-0" />
-                          <span className="truncate text-brand-white text-[11px] font-semibold">{f.name}</span>
-                        </div>
+                      <div key={i} className="flex items-center justify-between p-2 bg-brand-card rounded-[12px] text-xs shadow-[0_0_0_1px_#e6e3dc]">
+                        <span className="truncate text-brand-white text-xs font-semibold pr-2">{f.name}</span>
                         <button
                           type="button"
                           onClick={() => removeFile(i)}
-                          className="text-brand-textMuted hover:text-brand-red p-0.5"
+                          className="text-brand-textMuted hover:text-brand-red text-xs font-semibold"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          Remove
                         </button>
                       </div>
                     ))
@@ -200,19 +179,18 @@ export const SourcesUpload: React.FC = () => {
                 type="button"
                 disabled={uploading || selectedFiles.length === 0}
                 onClick={() => handleUploadAndRun(true)}
-                className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-white font-black rounded text-xs transition disabled:opacity-50 flex items-center justify-center gap-2 shadow"
+                className="w-full py-2.5 px-4 bg-brand-accent hover:bg-brand-accentHover text-white font-semibold rounded-[12px] text-xs transition disabled:opacity-50"
               >
-                <Play className="w-4 h-4 fill-white" />
-                <span>{uploading ? 'Ingesting Footage...' : 'Upload & Start Analysis Live'}</span>
+                {uploading ? 'Ingesting footage...' : 'Upload & start analysis live'}
               </button>
 
               <button
                 type="button"
                 disabled={uploading || selectedFiles.length === 0}
                 onClick={() => handleUploadAndRun(false)}
-                className="w-full py-2 px-3 bg-brand-black hover:bg-brand-card text-brand-white rounded text-xs font-bold border border-brand-border transition disabled:opacity-50"
+                className="w-full py-2 px-3 bg-brand-card hover:bg-brand-cardHover text-brand-white rounded-[12px] text-xs font-semibold shadow-[0_0_0_1px_#e6e3dc] transition disabled:opacity-50"
               >
-                Upload Only (Queue for Later)
+                Upload only (queue for later)
               </button>
             </div>
           </div>
@@ -220,27 +198,24 @@ export const SourcesUpload: React.FC = () => {
       </div>
 
       {/* Surveillance Camera Feeds Table */}
-      <div className="rounded-xl bg-brand-card border border-brand-border overflow-hidden">
+      <div className="rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] overflow-hidden">
         <div className="p-4 border-b border-brand-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-brand-yellow" />
-            <h3 className="font-bold text-brand-white text-sm">Active CCTV Surveillance Feeds</h3>
-          </div>
-          <span className="text-xs bg-brand-black px-2.5 py-1 rounded text-brand-white border border-brand-border font-mono font-bold">
-            {sources.length} Feeds Registered
+          <h3 className="font-semibold text-brand-white text-sm">Active CCTV surveillance feeds</h3>
+          <span className="text-xs px-2.5 py-1 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] text-brand-white font-mono font-semibold">
+            {sources.length} feeds registered
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-brand-darkest text-xs uppercase tracking-wider text-brand-textMuted border-b border-brand-border">
+            <thead className="bg-brand-card text-xs text-brand-textMuted border-b border-brand-border font-semibold">
               <tr>
                 <th className="py-3 px-4">Feed ID</th>
-                <th className="py-3 px-4">Camera Source</th>
-                <th className="py-3 px-4">Campus Location</th>
-                <th className="py-3 px-4">Analysis Status</th>
+                <th className="py-3 px-4">Camera source</th>
+                <th className="py-3 px-4">Campus location</th>
+                <th className="py-3 px-4">Analysis status</th>
                 <th className="py-3 px-4">Telemetry</th>
-                <th className="py-3 px-4 text-right">Live Actions</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-border">
@@ -250,53 +225,50 @@ export const SourcesUpload: React.FC = () => {
 
                 return (
                   <tr key={src.id} className="hover:bg-brand-cardHover transition">
-                    <td className="py-3 px-4 font-mono text-xs text-brand-yellow font-bold">
-                      FEED #{src.id}
+                    <td className="py-3 px-4 font-mono text-xs text-brand-accent font-semibold">
+                      Feed #{src.id}
                     </td>
-                    <td className="py-3 px-4 font-bold text-brand-white flex items-center gap-2">
-                      <Video className="w-4 h-4 text-brand-yellow flex-shrink-0" />
-                      <span>{src.name}</span>
+                    <td className="py-3 px-4 font-semibold text-brand-white">
+                      {src.name}
                     </td>
-                    <td className="py-3 px-4 text-xs text-brand-textMuted">{src.location_label}</td>
+                    <td className="py-3 px-4 text-xs text-brand-textMuted font-semibold">{src.location_label}</td>
                     <td className="py-3 px-4">
                       {isRunning ? (
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-brand-yellow animate-ping" />
-                          <span className="text-xs font-bold text-brand-yellow">
+                          <span className="w-2 h-2 rounded-full bg-brand-accent animate-ping" />
+                          <span className="text-xs font-semibold text-brand-accent">
                             Analyzing ({liveJob?.progress_pct?.toFixed(0) || 0}%)
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs px-2 py-0.5 rounded bg-brand-black border border-brand-border text-brand-textMuted font-semibold">
-                          Standby / Ready
+                        <span className="text-xs text-brand-textMuted font-semibold">
+                          Standby / ready
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-brand-white">
+                    <td className="py-3 px-4 font-mono text-xs text-brand-white font-semibold">
                       {isRunning ? (
-                        <span className="text-brand-yellow font-bold">
+                        <span className="text-brand-accent">
                           {liveJob?.processed_fps || 18.0} FPS
                         </span>
                       ) : (
-                        <span className="text-brand-textMuted">YOLO11 Ready</span>
+                        <span className="text-brand-textMuted">YOLO11 ready</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleStartJob(src.id)}
-                          className="px-2.5 py-1 bg-brand-yellow hover:bg-brand-yellowHover text-white text-xs font-black rounded flex items-center gap-1 shadow transition"
+                          className="px-2.5 py-1 bg-brand-accent hover:bg-brand-accentHover text-white text-xs font-semibold rounded-[12px] transition"
                         >
-                          <Play className="w-3 h-3 fill-white" />
-                          <span>{isRunning ? 'Restart' : 'Start'}</span>
+                          {isRunning ? 'Restart' : 'Start'}
                         </button>
 
                         <button
                           onClick={() => navigate(`/jobs/${src.id}`)}
-                          className="px-2.5 py-1 bg-brand-black border border-brand-border hover:border-brand-yellow text-brand-white text-xs font-bold rounded flex items-center gap-1 transition"
+                          className="px-2.5 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover text-brand-white text-xs font-semibold rounded-[12px] transition"
                         >
-                          <Eye className="w-3.5 h-3.5 text-brand-yellow" />
-                          <span>View</span>
+                          View
                         </button>
                       </div>
                     </td>

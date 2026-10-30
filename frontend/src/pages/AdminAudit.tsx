@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Shield, Users, Clock, History, Key } from 'lucide-react';
 import { apiRequest } from '../api/client';
 
 export const AdminAudit: React.FC = () => {
@@ -54,67 +53,64 @@ export const AdminAudit: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-brand-white tracking-tight flex items-center gap-2">
-          <UserCheck className="w-6 h-6 text-brand-yellow" />
-          <span>User RBAC & Audit Ledger</span>
+        <h2 className="text-2xl font-semibold text-brand-white tracking-tight">
+          User RBAC and audit ledger
         </h2>
-        <p className="text-sm text-brand-textMuted mt-1">
+        <p className="text-xs text-brand-textMuted mt-1">
           Role-based permission enforcement and immutable security event logs.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* User Accounts Card */}
-        <div className="p-5 rounded-xl bg-brand-card border border-brand-border h-fit space-y-4">
-          <h3 className="font-semibold text-brand-white flex items-center gap-2 text-sm">
-            <Users className="w-4 h-4 text-brand-yellow" />
-            Security Personnel Accounts
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] h-fit space-y-4">
+          <h3 className="font-semibold text-brand-white text-sm">
+            Security personnel accounts
           </h3>
 
           <div className="space-y-3">
             {users.map((u) => (
-              <div key={u.id} className="p-3 bg-brand-darkest rounded-lg border border-brand-border text-xs">
+              <div key={u.id} className="p-3 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-brand-white">{u.name}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-brand-yellow/20 text-brand-yellow border border-brand-yellow/30 font-bold">
+                  <span className="font-semibold text-brand-white">{u.name}</span>
+                  <span className="text-xs text-brand-accent font-semibold capitalize">
                     {u.role}
                   </span>
                 </div>
-                <div className="text-brand-textMuted mt-1">{u.email}</div>
+                <div className="text-brand-textMuted mt-1 font-semibold">{u.email}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Audit Log Table */}
-        <div className="lg:col-span-2 rounded-xl bg-brand-card border border-brand-border overflow-hidden">
+        <div className="lg:col-span-2 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] overflow-hidden">
           <div className="p-4 border-b border-brand-border flex items-center justify-between">
-            <h3 className="font-semibold text-brand-white flex items-center gap-2 text-sm">
-              <History className="w-4 h-4 text-brand-yellow" />
-              Audit Log Journal
+            <h3 className="font-semibold text-brand-white text-sm">
+              Audit log journal
             </h3>
-            <span className="text-xs text-brand-yellow font-mono font-bold">Immutable SHA-256</span>
+            <span className="text-xs text-brand-accent font-mono font-semibold">Immutable SHA-256</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-brand-dark text-xs uppercase tracking-wider text-brand-textMuted border-b border-brand-border">
+              <thead className="bg-brand-card text-xs text-brand-textMuted border-b border-brand-border font-semibold">
                 <tr>
                   <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">Operator / User</th>
+                  <th className="py-3 px-4">Operator / user</th>
                   <th className="py-3 px-4">Action</th>
-                  <th className="py-3 px-4">Target Entity</th>
+                  <th className="py-3 px-4">Target entity</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-border text-xs">
                 {auditLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-brand-cardHover">
-                    <td className="py-3 px-4 font-mono text-brand-textMuted">
+                    <td className="py-3 px-4 font-mono text-brand-textMuted font-semibold">
                       {new Date(log.timestamp).toLocaleString()}
                     </td>
-                    <td className="py-3 px-4 font-bold text-brand-white">{log.user_name || 'System / Anonymous'}</td>
-                    <td className="py-3 px-4 font-mono text-brand-yellow font-bold">{log.action}</td>
-                    <td className="py-3 px-4 text-brand-textMuted">
+                    <td className="py-3 px-4 font-semibold text-brand-white">{log.user_name || 'System / Anonymous'}</td>
+                    <td className="py-3 px-4 font-mono text-brand-accent font-semibold">{log.action}</td>
+                    <td className="py-3 px-4 text-brand-textMuted font-semibold">
                       {log.entity} #{log.entity_id}
                     </td>
                   </tr>
@@ -127,4 +123,3 @@ export const AdminAudit: React.FC = () => {
     </div>
   );
 };
-

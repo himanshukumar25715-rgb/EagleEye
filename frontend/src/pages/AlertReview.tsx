@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  CheckCircle2, 
-  XCircle, 
-  ArrowUpRight, 
-  ShieldAlert, 
-  Clock, 
-  MapPin, 
-  Hash, 
-  FileText,
-  Lock
-} from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { StatusBadge, TypeBadge } from '../components/Badges';
 import { useAuthStore } from '../stores/authStore';
@@ -76,7 +64,7 @@ export const AlertReview: React.FC = () => {
         }),
       });
       setAlert(updated);
-      setSuccessMsg(`Incident successfully marked as ${status.replace('_', ' ').toUpperCase()}`);
+      setSuccessMsg(`Incident successfully marked as ${status.replace('_', ' ')}`);
     } catch (e: any) {
       alert(`Error updating review: ${e.message}`);
     } finally {
@@ -87,7 +75,7 @@ export const AlertReview: React.FC = () => {
   const isViewer = user?.role === 'viewer';
 
   if (loading || !alert) {
-    return <div className="text-sm text-brand-textMuted">Loading incident record...</div>;
+    return <div className="text-xs text-brand-textMuted font-semibold">Loading incident record...</div>;
   }
 
   return (
@@ -96,10 +84,9 @@ export const AlertReview: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/alerts')}
-          className="flex items-center gap-2 text-xs font-semibold text-brand-yellow hover:underline"
+          className="text-xs font-semibold text-brand-accent hover:underline"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Alert Queue</span>
+          Back to alert queue
         </button>
 
         <div className="flex items-center gap-4">
@@ -109,9 +96,8 @@ export const AlertReview: React.FC = () => {
       </div>
 
       {successMsg && (
-        <div className="p-3 bg-brand-card border border-brand-yellow rounded-lg text-xs font-bold text-brand-yellow flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{successMsg}</span>
+        <div className="p-4 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs font-semibold text-brand-accent">
+          {successMsg}
         </div>
       )}
 
@@ -119,51 +105,42 @@ export const AlertReview: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Evidence Visual Panel (Left 2 cols) */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-xl bg-brand-card border border-brand-border p-4">
-            <h3 className="text-sm font-semibold text-brand-white mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-brand-yellow" />
-                Captured Evidence Snapshot
-              </span>
-              <span className="text-xs font-mono text-brand-textMuted">
+          <div className="rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] p-4">
+            <div className="text-sm font-semibold text-brand-white mb-3 flex items-center justify-between">
+              <span>Captured evidence snapshot</span>
+              <span className="text-xs font-mono text-brand-textMuted font-semibold">
                 Timestamp: {alert.ts_start?.toFixed(1) || '0.0'}s (Frame #{alert.frame_start})
               </span>
-            </h3>
+            </div>
 
             {/* Evidence Visual Canvas */}
-            <div className="relative aspect-video rounded-lg bg-brand-black border border-brand-border flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-neutral-900/60 to-black flex items-center justify-center p-6 text-center">
+            <div className="relative aspect-video rounded-[12px] bg-neutral-900 shadow-[0_0_0_1px_#e6e3dc] flex items-center justify-center overflow-hidden">
+              <div className="absolute inset-0 bg-neutral-900 flex items-center justify-center p-6 text-center">
                 <div className="space-y-2">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-brand-black border border-brand-red flex items-center justify-center text-brand-red shadow-lg">
-                    <ShieldAlert className="w-8 h-8" />
-                  </div>
-                  <h4 className="font-bold text-brand-white text-base">Candidate Incident Flagged</h4>
-                  <p className="text-xs text-brand-textMuted max-w-md">
+                  <h4 className="font-semibold text-white text-xl">Candidate incident flagged</h4>
+                  <p className="text-xs text-neutral-300 max-w-md font-semibold">
                     AI bounding track detected at {alert.location_label}. Multi-frame rule satisfied.
                   </p>
-                  <div className="inline-block px-3 py-1 rounded bg-brand-black border border-brand-border text-[11px] font-mono text-brand-yellow font-bold">
-                    AI Confidence: {(alert.confidence * 100).toFixed(1)}%
+                  <div className="inline-block px-3 py-1 rounded-[12px] bg-neutral-800 text-xs font-mono text-white font-semibold">
+                    AI confidence: {(alert.confidence * 100).toFixed(1)}%
                   </div>
                 </div>
               </div>
 
               {/* Simulated Bounding Box Overlay */}
-              <div className="absolute border-2 border-brand-red bg-brand-red/10 rounded w-48 h-36 top-1/4 left-1/3 flex flex-col justify-between p-1.5 pointer-events-none">
-                <span className="bg-brand-red text-brand-white text-[10px] font-bold px-1 py-0.5 rounded w-fit">
-                  {alert.type.toUpperCase()} {(alert.confidence * 100).toFixed(0)}%
+              <div className="absolute border-2 border-brand-red bg-brand-red/10 rounded-[12px] w-48 h-36 top-1/4 left-1/3 flex flex-col justify-between p-2 pointer-events-none">
+                <span className="bg-brand-red text-white text-xs font-semibold px-2 py-0.5 rounded-[12px] w-fit">
+                  {alert.type.replace('_', ' ')} {(alert.confidence * 100).toFixed(0)}%
                 </span>
-                <span className="text-[10px] font-mono text-brand-yellow self-end font-bold">
+                <span className="text-xs font-mono text-white self-end font-semibold">
                   {alert.track_ids || 'TRK-ID'}
                 </span>
               </div>
             </div>
 
             {/* Cryptographic Hash Verification */}
-            <div className="mt-3 p-3 bg-brand-darkest rounded-lg border border-brand-border flex items-center justify-between text-xs font-mono">
-              <div className="flex items-center gap-2 text-brand-textMuted">
-                <Lock className="w-3.5 h-3.5 text-brand-yellow" />
-                <span>SHA-256 Chain Integrity:</span>
-              </div>
+            <div className="mt-4 p-3 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] flex items-center justify-between text-xs font-mono">
+              <span className="text-brand-textMuted font-semibold">SHA-256 chain integrity:</span>
               <span className="text-brand-textMuted truncate max-w-xs font-mono">
                 {alert.evidence_items?.[0]?.sha256 || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
               </span>
@@ -174,55 +151,54 @@ export const AlertReview: React.FC = () => {
         {/* Verification Controls & Metadata (Right 1 col) */}
         <div className="space-y-4">
           {/* Metadata Card */}
-          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3 text-xs">
-            <h4 className="font-semibold text-brand-white uppercase tracking-wider text-[11px]">
-              Incident Metadata
+          <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] space-y-3 text-xs">
+            <h4 className="font-semibold text-brand-white text-xs">
+              Incident metadata
             </h4>
-            <div className="flex justify-between border-b border-brand-border/60 pb-2">
-              <span className="text-brand-textMuted">Incident ID:</span>
-              <span className="font-mono text-brand-white font-bold">#{alert.id}</span>
+            <div className="flex justify-between border-b border-brand-border pb-2">
+              <span className="text-brand-textMuted font-semibold">Incident ID:</span>
+              <span className="font-mono text-brand-white font-semibold">#{alert.id}</span>
             </div>
-            <div className="flex justify-between border-b border-brand-border/60 pb-2">
-              <span className="text-brand-textMuted">Camera Feed:</span>
-              <span className="text-brand-white font-medium">{alert.source_name}</span>
+            <div className="flex justify-between border-b border-brand-border pb-2">
+              <span className="text-brand-textMuted font-semibold">Camera feed:</span>
+              <span className="text-brand-white font-semibold">{alert.source_name}</span>
             </div>
-            <div className="flex justify-between border-b border-brand-border/60 pb-2">
-              <span className="text-brand-textMuted">Campus Zone:</span>
-              <span className="text-brand-white font-medium">{alert.location_label}</span>
+            <div className="flex justify-between border-b border-brand-border pb-2">
+              <span className="text-brand-textMuted font-semibold">Campus zone:</span>
+              <span className="text-brand-white font-semibold">{alert.location_label}</span>
             </div>
-            <div className="flex justify-between border-b border-brand-border/60 pb-2">
-              <span className="text-brand-textMuted">Track IDs:</span>
-              <span className="font-mono text-brand-yellow font-bold">{alert.track_ids || 'N/A'}</span>
+            <div className="flex justify-between border-b border-brand-border pb-2">
+              <span className="text-brand-textMuted font-semibold">Track IDs:</span>
+              <span className="font-mono text-brand-accent font-semibold">{alert.track_ids || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-brand-textMuted">Triggered At:</span>
-              <span className="text-brand-white">{new Date(alert.created_at).toLocaleString()}</span>
+              <span className="text-brand-textMuted font-semibold">Triggered at:</span>
+              <span className="text-brand-white font-semibold">{new Date(alert.created_at).toLocaleString()}</span>
             </div>
           </div>
 
           {/* Verification Decision Form */}
-          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-4">
-            <h4 className="font-semibold text-brand-white uppercase tracking-wider text-[11px] flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5 text-brand-yellow" />
-              Human Operator Review
+          <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] space-y-4">
+            <h4 className="font-semibold text-brand-white text-xs">
+              Human operator review
             </h4>
 
             {isViewer ? (
-              <p className="text-xs text-brand-textMuted italic">
-                Viewer accounts have read-only access. Operator or Admin credentials required to submit verification decisions.
+              <p className="text-xs text-brand-textMuted font-semibold">
+                Viewer accounts have read-only access. Operator or admin credentials required to submit verification decisions.
               </p>
             ) : (
               <>
                 <div>
-                  <label className="block text-xs text-brand-textMuted mb-1 font-medium">
-                    Reviewer Notes / Incident Context:
+                  <label className="block text-xs text-brand-textMuted mb-2 font-semibold">
+                    Reviewer notes / incident context:
                   </label>
                   <textarea
                     rows={3}
                     value={reviewNote}
                     onChange={(e) => setReviewNote(e.target.value)}
-                    placeholder="e.g. Confirmed student carrying prohibited item; Campus security dispatched to Gate 1."
-                    className="w-full px-3 py-2 bg-brand-darkest border border-brand-border rounded-lg text-xs text-brand-white focus:outline-none focus:border-brand-yellow"
+                    placeholder="e.g. Confirmed student carrying prohibited item; campus security dispatched."
+                    className="w-full px-3 py-2 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
                   />
                 </div>
 
@@ -230,28 +206,25 @@ export const AlertReview: React.FC = () => {
                   <button
                     onClick={() => handleDecision('confirmed')}
                     disabled={submitting}
-                    className="w-full py-2 px-3 rounded-lg bg-brand-white hover:bg-neutral-200 text-brand-black font-extrabold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow"
+                    className="w-full py-2.5 px-4 rounded-[12px] bg-brand-white hover:bg-neutral-100 text-brand-white font-semibold text-xs transition disabled:opacity-50 shadow-[0_0_0_1px_#e6e3dc]"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-brand-black" />
-                    <span>Confirm as Real Incident</span>
+                    Confirm as real incident
                   </button>
 
                   <button
                     onClick={() => handleDecision('false_alarm')}
                     disabled={submitting}
-                    className="w-full py-2 px-3 rounded-lg bg-brand-dark border border-brand-border hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white font-semibold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                    className="w-full py-2.5 px-4 rounded-[12px] bg-brand-card hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white font-semibold text-xs transition disabled:opacity-50 shadow-[0_0_0_1px_#e6e3dc]"
                   >
-                    <XCircle className="w-4 h-4 text-brand-textMuted" />
-                    <span>Dismiss as False Alarm</span>
+                    Dismiss as false alarm
                   </button>
 
                   <button
                     onClick={() => handleDecision('escalated')}
                     disabled={submitting}
-                    className="w-full py-2 px-3 rounded-lg bg-brand-red hover:bg-brand-redHover text-brand-white font-extrabold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow"
+                    className="w-full py-2.5 px-4 rounded-[12px] bg-brand-red hover:bg-brand-redHover text-white font-semibold text-xs transition disabled:opacity-50 shadow-[0_0_0_1px_#e6e3dc]"
                   >
-                    <ArrowUpRight className="w-4 h-4" />
-                    <span>Escalate to Security Chief</span>
+                    Escalate to security chief
                   </button>
                 </div>
               </>
@@ -262,4 +235,3 @@ export const AlertReview: React.FC = () => {
     </div>
   );
 };
-
