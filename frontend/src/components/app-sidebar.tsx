@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Video,
+  Upload,
   Bell,
   BarChart3,
   FileText,
@@ -42,7 +43,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navPlatform = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/sources", label: "CCTV cameras", icon: Video },
+    { to: "/cameras", label: "CCTV cameras", icon: Video },
+    { to: "/upload", label: "Upload footage", icon: Upload },
     { to: "/alerts", label: "Alert queue", icon: Bell },
     { to: "/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/reports", label: "Reports", icon: FileText },
@@ -118,6 +120,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 const isActive =
                   item.to === "/"
                     ? location.pathname === "/"
+                    : item.to === "/cameras"
+                    ? location.pathname.startsWith("/cameras") || location.pathname.startsWith("/sources")
                     : location.pathname.startsWith(item.to);
                 const Icon = item.icon;
 

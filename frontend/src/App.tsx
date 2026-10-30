@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { SourcesUpload } from './pages/SourcesUpload';
+import { CamerasMatrix } from './pages/CamerasMatrix';
+import { UploadFootage } from './pages/UploadFootage';
 import { VideoViewer } from './pages/VideoViewer';
 import { AlertQueue } from './pages/AlertQueue';
 import { AlertReview } from './pages/AlertReview';
@@ -56,8 +57,9 @@ export default function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="sources" element={<SourcesUpload />} />
-            <Route path="cameras" element={<SourcesUpload />} />
+            <Route path="cameras" element={<CamerasMatrix />} />
+            <Route path="sources" element={<CamerasMatrix />} />
+            <Route path="upload" element={<UploadFootage />} />
             <Route path="jobs/:id" element={<VideoViewer />} />
             <Route path="alerts" element={<AlertQueue />} />
             <Route path="alerts/:id" element={<AlertReview />} />

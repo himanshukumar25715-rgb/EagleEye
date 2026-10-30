@@ -29,6 +29,7 @@ export const Layout: React.FC = () => {
   const getPageTitle = (pathname: string): string => {
     if (pathname === "/") return "Dashboard";
     if (pathname.startsWith("/sources") || pathname.startsWith("/cameras")) return "CCTV camera matrix";
+    if (pathname.startsWith("/upload")) return "Upload footage";
     if (pathname.startsWith("/alerts/") && pathname.length > 8) return "Alert review";
     if (pathname.startsWith("/alerts")) return "Alert queue";
     if (pathname.startsWith("/jobs/")) return "Live video feed";

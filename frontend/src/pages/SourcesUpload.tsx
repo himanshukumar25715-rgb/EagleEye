@@ -169,9 +169,9 @@ export const SourcesUpload: React.FC = () => {
             ))}
           </div>
 
-          {/* Upload Footage Modal Trigger */}
+          {/* Upload Footage Page Trigger */}
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => navigate('/upload')}
             className="flex items-center gap-1.5 px-3 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-accent hover:text-white text-brand-accent rounded-[12px] text-xs font-semibold transition"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -322,7 +322,7 @@ export const SourcesUpload: React.FC = () => {
                     <button
                       onClick={() => {
                         setFocusedCam(null);
-                        setShowUploadModal(true);
+                        navigate('/upload');
                       }}
                       className="px-4 py-2 bg-brand-accent hover:bg-brand-accentHover text-white rounded-[12px] text-xs font-semibold transition"
                     >
