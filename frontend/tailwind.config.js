@@ -8,21 +8,40 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          black: '#000000',
+          darkest: '#0A0A0A',
+          dark: '#121212',
+          card: '#181818',
+          cardHover: '#222222',
+          border: '#2E2E2E',
+          borderLight: '#444444',
+          white: '#FFFFFF',
+          textMuted: '#A3A3A3',
+          yellow: '#FFCC00',
+          yellowHover: '#FFD633',
+          yellowDark: '#B28F00',
+          red: '#FF3333',
+          redHover: '#FF4D4D',
+          redDark: '#8B0000',
+        },
         campus: {
-          darkest: '#080E0A',
-          dark: '#0E1A13',
-          card: '#14251B',
-          cardHover: '#1B3124',
-          border: '#244331',
-          gold: '#E5B842',
-          goldHover: '#F7C948',
-          goldMuted: '#967926',
-          text: '#F3F4F6',
-          textMuted: '#9CA3AF',
+          black: '#000000',
+          darkest: '#0A0A0A',
+          dark: '#121212',
+          card: '#181818',
+          cardHover: '#222222',
+          border: '#2E2E2E',
+          borderLight: '#444444',
+          white: '#FFFFFF',
+          textMuted: '#A3A3A3',
+          gold: '#FFCC00',
+          goldHover: '#FFD633',
+          red: '#FF3333',
+          redHover: '#FF4D4D',
         }
       }
     },
   },
   plugins: [],
 }
-
