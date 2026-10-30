@@ -7,6 +7,7 @@ import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 from ultralytics import YOLO
 from app.core.config import settings
+from app.cv.roboflow_weapon_client import RoboflowWeaponClient
 
 # Mapping of relevant COCO classes for Eagle Eye 2.0
 PERSON_CLASS_ID = 0
@@ -30,6 +31,7 @@ class YOLO11SurveillancePipeline:
 
         print(f"[EagleEye YOLO11] Initializing neural network from {weights_path}...")
         self.model = YOLO(weights_path)
+        self.roboflow_client = RoboflowWeaponClient()
 
         # Module 1: Weapon multi-frame state: track_id -> list of bools (last 5 processed frames)
         self.weapon_history: Dict[str, List[bool]] = {}
@@ -113,6 +115,18 @@ class YOLO11SurveillancePipeline:
                 elif cls_id in WEAPON_CLASS_IDS:
                     detected_weapons.append(item_info)
 
+        # Query Roboflow Serverless Workflow (CCTV Gun & Knife) every few frames or when persons exist
+        if detected_persons and frame_idx % max(1, int(fps // 2)) == 0:
+            rf_weapons = self.roboflow_client.detect_weapons(frame, confidence_thresh=settings.WEAPON_CONFIDENCE_THRESHOLD)
+            for rf_w in rf_weapons:
+                detected_weapons.append({
+                    "track_id": f"rf_{rf_w['class']}",
+                    "conf": rf_w["confidence"],
+                    "bbox": rf_w["bbox"],
+                    "centroid": rf_w["centroid"],
+                    "label": rf_w["class"]
+                })
+
         # -------------------------------------------------------------
         # MODULE 1: Weapon Detection with Multi-frame Verification (Section 9.2)
         # -------------------------------------------------------------
@@ -139,7 +153,7 @@ class YOLO11SurveillancePipeline:
                             "confidence": round(conf, 2),
                             "track_id": track_id,
                             "bbox": w_item["bbox"],
-                            "description": "Weapon / dangerous implement confirmed across frames"
+                            "description": f"CCTV Weapon Alert: {w_item.get('label', 'weapon').upper()} detected (Roboflow AI)"
                         })
 
         # Clean history for lost tracks
