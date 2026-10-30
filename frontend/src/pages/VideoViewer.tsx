@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   ArrowLeft
 } from 'lucide-react';
-import { apiRequest } from '../api/client';
+import { apiRequest, BASE_URL } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 
 export const VideoViewer: React.FC = () => {
@@ -121,13 +121,13 @@ export const VideoViewer: React.FC = () => {
         {/* MJPEG Live Stream or Seekable Video */}
         {currentStatus === 'processing' ? (
           <img
-            src={`http://localhost:8000/api/v1/jobs/${id}/stream`}
+            src={`${BASE_URL}/jobs/${id}/stream`}
             alt="Annotated MJPEG Feed"
             className="w-full h-full object-contain"
           />
         ) : (
           <video
-            src={`http://localhost:8000/api/v1/jobs/${id}/video`}
+            src={`${BASE_URL}/jobs/${id}/video`}
             controls
             autoPlay
             muted
