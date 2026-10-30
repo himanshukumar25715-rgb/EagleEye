@@ -42,7 +42,9 @@ export const useAlertStore = create<AlertStoreState>((set, get) => ({
     if (socket && socket.readyState === WebSocket.OPEN) return;
 
     try {
-      socket = new WebSocket('ws://localhost:8000/ws/alerts');
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/alerts`;
+      socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
         set({ wsConnected: true });
