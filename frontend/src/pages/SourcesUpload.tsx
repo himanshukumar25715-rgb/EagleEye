@@ -1,18 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, Video, Radio, ArrowRight, CheckCircle2, AlertCircle, Play } from 'lucide-react';
+import { 
+  UploadCloud, 
+  Video, 
+  Play, 
+  Plus, 
+  X, 
+  Layers, 
+  CheckCircle2, 
+  AlertCircle, 
+  Eye
+} from 'lucide-react';
 import { apiRequest } from '../api/client';
+import { useAlertStore } from '../stores/alertStore';
 
 export const SourcesUpload: React.FC = () => {
   const navigate = useNavigate();
+  const { activeJobs } = useAlertStore();
+
   const [sources, setSources] = useState<any[]>([]);
-  const [name, setName] = useState('');
-  const [locationLabel, setLocationLabel] = useState('');
-  const [sourceType, setSourceType] = useState<'video_file' | 'rtsp'>('video_file');
-  const [rtspUri, setRtspUri] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [locationLabel, setLocationLabel] = useState('Campus Security Perimeter');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     loadSources();
@@ -23,235 +34,279 @@ export const SourcesUpload: React.FC = () => {
       const data = await apiRequest<any[]>('/sources');
       setSources(data);
     } catch {
-      setSources([
-        {
-          id: 1,
-          name: 'Main Entrance Gate 1',
-          type: 'video_file',
-          location_label: 'Campus Gate 1 - North Boundary',
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      // Demo fallback
     }
   }
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !locationLabel) {
-      setError('Please provide a camera source name and campus location label.');
-      return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
     }
-    if (sourceType === 'video_file' && !file) {
-      setError('Please select a video file (.mp4, .avi, .mkv).');
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadAndRun = async (autoStart: boolean = true) => {
+    if (selectedFiles.length === 0) {
+      setError('Please select at least one CCTV video file to upload.');
       return;
     }
 
     setUploading(true);
     setError(null);
+    setSuccessMsg(null);
 
     try {
       const formData = new FormData();
-      formData.append('name', name);
+      selectedFiles.forEach((file) => {
+        formData.append('files', file);
+      });
       formData.append('location_label', locationLabel);
-      formData.append('source_type', sourceType);
-      if (sourceType === 'video_file' && file) {
-        formData.append('file', file);
-      } else if (sourceType === 'rtsp') {
-        formData.append('rtsp_uri', rtspUri);
-      }
+      formData.append('auto_start', autoStart ? 'true' : 'false');
 
-      const res = await apiRequest<any>('/sources', {
+      const res = await apiRequest<any>('/sources/batch', {
         method: 'POST',
         body: formData,
       });
 
-      // Clear form
-      setName('');
-      setLocationLabel('');
-      setFile(null);
-      loadSources();
-      navigate(`/jobs/${res.id || 1}`);
+      setSuccessMsg(res.message || `Uploaded ${selectedFiles.length} CCTV footages successfully!`);
+      setSelectedFiles([]);
+      await loadSources();
+
+      if (autoStart && res.sources && res.sources.length > 0) {
+        navigate(`/jobs/${res.sources[0].job_id}`);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to upload CCTV source');
+      setError(err.message || 'Failed to upload video files.');
     } finally {
       setUploading(false);
     }
   };
 
+  const handleStartJob = async (jobId: number) => {
+    try {
+      await apiRequest(`/jobs/${jobId}/start`, { method: 'POST' });
+      navigate(`/jobs/${jobId}`);
+    } catch (e: any) {
+      alert(`Error starting analysis: ${e.message}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">Camera Feeds & Video Sources</h2>
-        <p className="text-sm text-campus-textMuted mt-1">
-          Ingest recorded CCTV video or configure live RTSP camera feeds for AI pipeline analysis.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-extrabold text-brand-white tracking-tight flex items-center gap-2">
+            <UploadCloud className="w-6 h-6 text-brand-yellow" />
+            <span>CCTV Video Ingestion & Real-Time Analytics</span>
+          </h2>
+          <p className="text-sm text-brand-textMuted mt-1">
+            Upload CCTV footage. Start video analysis to run live detection while playback runs.
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Upload Form Card */}
-        <div className="lg:col-span-1 p-5 rounded-xl bg-campus-card border border-campus-border h-fit">
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <UploadCloud className="w-5 h-5 text-campus-gold" />
-            Ingest Footage
-          </h3>
+      {successMsg && (
+        <div className="p-3 bg-brand-darkest border-2 border-brand-white rounded-lg text-xs font-bold text-brand-white flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-brand-yellow" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-950/60 border border-red-800 rounded-lg text-xs text-red-300 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
+      {error && (
+        <div className="p-3 bg-brand-black border-2 border-brand-red rounded-lg text-xs font-bold text-brand-red flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Upload & Dropzone Card */}
+      <div className="p-6 rounded-xl bg-brand-card border border-brand-border">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Dropzone Area */}
+          <div className="md:col-span-2 border-2 border-dashed border-brand-border hover:border-brand-yellow rounded-xl p-8 flex flex-col items-center justify-center text-center bg-brand-black transition">
+            <div className="w-14 h-14 rounded-2xl bg-brand-card border border-brand-yellow flex items-center justify-center text-brand-yellow mb-3">
+              <UploadCloud className="w-7 h-7" />
             </div>
-          )}
+            <h4 className="font-bold text-brand-white text-base">Select or Drop CCTV Video Footage</h4>
+            <p className="text-xs text-brand-textMuted mt-1 max-w-sm">
+              Supports single or multiple video files (.mp4, .avi, .mkv).
+            </p>
 
-          <form onSubmit={handleUpload} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-campus-textMuted mb-1">
-                Source Type
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSourceType('video_file')}
-                  className={`py-2 px-3 text-xs font-semibold rounded-lg border flex items-center justify-center gap-2 transition ${
-                    sourceType === 'video_file'
-                      ? 'bg-campus-gold text-campus-darkest border-campus-gold'
-                      : 'bg-campus-dark text-campus-textMuted border-campus-border hover:bg-campus-card'
-                  }`}
-                >
-                  <Video className="w-3.5 h-3.5" />
-                  Recorded File
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSourceType('rtsp')}
-                  className={`py-2 px-3 text-xs font-semibold rounded-lg border flex items-center justify-center gap-2 transition ${
-                    sourceType === 'rtsp'
-                      ? 'bg-campus-gold text-campus-darkest border-campus-gold'
-                      : 'bg-campus-dark text-campus-textMuted border-campus-border hover:bg-campus-card'
-                  }`}
-                >
-                  <Radio className="w-3.5 h-3.5" />
-                  Live RTSP
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-campus-textMuted mb-1">
-                Camera Name / Label
-              </label>
+            <label className="mt-4 px-4 py-2 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-extrabold text-xs rounded cursor-pointer shadow transition flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              <span>Browse CCTV Videos</span>
               <input
-                type="text"
-                placeholder="e.g. Hostel Corridor Cam 03"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-sm text-white focus:outline-none focus:border-campus-gold"
+                type="file"
+                multiple
+                accept="video/*"
+                onChange={handleFileChange}
+                className="hidden"
               />
-            </div>
+            </label>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-campus-textMuted mb-1">
-                Campus Location
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Block B - 2nd Floor Staircase"
-                value={locationLabel}
-                onChange={(e) => setLocationLabel(e.target.value)}
-                className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-sm text-white focus:outline-none focus:border-campus-gold"
-              />
-            </div>
-
-            {sourceType === 'video_file' ? (
+          {/* Config & Queue Controls */}
+          <div className="space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-campus-textMuted mb-1">
-                  Select Video (.mp4, .avi, .mov)
-                </label>
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-                  className="w-full text-xs text-campus-textMuted file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-campus-card file:text-campus-gold hover:file:bg-campus-border"
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-campus-textMuted mb-1">
-                  RTSP Stream URI
+                <label className="block text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">
+                  Campus Zone / Camera Location
                 </label>
                 <input
                   type="text"
-                  placeholder="rtsp://admin:pass@192.168.1.50:554/stream1"
-                  value={rtspUri}
-                  onChange={(e) => setRtspUri(e.target.value)}
-                  className="w-full px-3 py-2 bg-campus-darkest border border-campus-border rounded-lg text-sm text-white focus:outline-none focus:border-campus-gold font-mono"
+                  value={locationLabel}
+                  onChange={(e) => setLocationLabel(e.target.value)}
+                  placeholder="e.g. North Gate & Hostel Corridor"
+                  className="w-full px-3 py-2 bg-brand-black border border-brand-border rounded text-xs text-brand-white focus:outline-none focus:border-brand-yellow"
                 />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={uploading}
-              className="w-full py-2.5 px-4 bg-campus-gold hover:bg-campus-goldHover text-campus-darkest font-semibold rounded-lg text-sm transition disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
-            >
-              {uploading ? 'Processing & Ingesting...' : 'Upload & Start Pipeline'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
+              {/* Selected Files Chip List */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">
+                  Selected Files Queue ({selectedFiles.length})
+                </label>
+                <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 bg-brand-black rounded border border-brand-border">
+                  {selectedFiles.length === 0 ? (
+                    <p className="text-[11px] text-brand-textMuted italic p-1">No videos queued yet</p>
+                  ) : (
+                    selectedFiles.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between p-1.5 bg-brand-card rounded text-xs border border-brand-border">
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <Video className="w-3.5 h-3.5 text-brand-yellow flex-shrink-0" />
+                          <span className="truncate text-brand-white text-[11px] font-semibold">{f.name}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="text-brand-textMuted hover:text-brand-red p-0.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                disabled={uploading || selectedFiles.length === 0}
+                onClick={() => handleUploadAndRun(true)}
+                className="w-full py-2.5 px-4 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black font-black rounded text-xs transition disabled:opacity-50 flex items-center justify-center gap-2 shadow"
+              >
+                <Play className="w-4 h-4 fill-brand-black" />
+                <span>{uploading ? 'Ingesting Footage...' : 'Upload & Start Analysis Live'}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={uploading || selectedFiles.length === 0}
+                onClick={() => handleUploadAndRun(false)}
+                className="w-full py-2 px-3 bg-brand-black hover:bg-brand-card text-brand-white rounded text-xs font-bold border border-brand-border transition disabled:opacity-50"
+              >
+                Upload Only (Queue for Later)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Surveillance Camera Feeds Table */}
+      <div className="rounded-xl bg-brand-card border border-brand-border overflow-hidden">
+        <div className="p-4 border-b border-brand-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-brand-yellow" />
+            <h3 className="font-bold text-brand-white text-sm">Active CCTV Surveillance Feeds</h3>
+          </div>
+          <span className="text-xs bg-brand-black px-2.5 py-1 rounded text-brand-white border border-brand-border font-mono font-bold">
+            {sources.length} Feeds Registered
+          </span>
         </div>
 
-        {/* Sources Catalog Table */}
-        <div className="lg:col-span-2 rounded-xl bg-campus-card border border-campus-border overflow-hidden">
-          <div className="p-4 border-b border-campus-border flex items-center justify-between">
-            <h3 className="font-semibold text-white">Registered Surveillance Feeds</h3>
-            <span className="text-xs bg-campus-dark px-2.5 py-1 rounded text-campus-textMuted border border-campus-border">
-              {sources.length} Sources Active
-            </span>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-brand-darkest text-xs uppercase tracking-wider text-brand-textMuted border-b border-brand-border">
+              <tr>
+                <th className="py-3 px-4">Feed ID</th>
+                <th className="py-3 px-4">Camera Source</th>
+                <th className="py-3 px-4">Campus Location</th>
+                <th className="py-3 px-4">Analysis Status</th>
+                <th className="py-3 px-4">Telemetry</th>
+                <th className="py-3 px-4 text-right">Live Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-brand-border">
+              {sources.map((src) => {
+                const liveJob = activeJobs[src.id];
+                const isRunning = liveJob?.status === 'processing';
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-campus-dark text-xs uppercase tracking-wider text-campus-textMuted border-b border-campus-border">
-                <tr>
-                  <th className="py-3 px-4">Camera Feed</th>
-                  <th className="py-3 px-4">Location</th>
-                  <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4">Ingested At</th>
-                  <th className="py-3 px-4 text-right">Viewer</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-campus-border">
-                {sources.map((src) => (
-                  <tr key={src.id} className="hover:bg-campus-cardHover/70 transition">
-                    <td className="py-3 px-4 font-medium text-white flex items-center gap-2">
-                      <Video className="w-4 h-4 text-campus-gold" />
-                      {src.name}
+                return (
+                  <tr key={src.id} className="hover:bg-brand-cardHover transition">
+                    <td className="py-3 px-4 font-mono text-xs text-brand-yellow font-bold">
+                      FEED #{src.id}
                     </td>
-                    <td className="py-3 px-4 text-campus-textMuted">{src.location_label}</td>
+                    <td className="py-3 px-4 font-bold text-brand-white flex items-center gap-2">
+                      <Video className="w-4 h-4 text-brand-yellow flex-shrink-0" />
+                      <span>{src.name}</span>
+                    </td>
+                    <td className="py-3 px-4 text-xs text-brand-textMuted">{src.location_label}</td>
                     <td className="py-3 px-4">
-                      <span className="text-xs uppercase font-mono px-2 py-0.5 rounded bg-campus-darkest border border-campus-border text-campus-gold">
-                        {src.type}
-                      </span>
+                      {isRunning ? (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-brand-yellow animate-ping" />
+                          <span className="text-xs font-bold text-brand-yellow">
+                            Analyzing ({liveJob?.progress_pct?.toFixed(0) || 0}%)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded bg-brand-black border border-brand-border text-brand-textMuted font-semibold">
+                          Standby / Ready
+                        </span>
+                      )}
                     </td>
-                    <td className="py-3 px-4 text-xs text-campus-textMuted">
-                      {new Date(src.created_at).toLocaleDateString()}
+                    <td className="py-3 px-4 font-mono text-xs text-brand-white">
+                      {isRunning ? (
+                        <span className="text-brand-yellow font-bold">
+                          {liveJob?.processed_fps || 18.0} FPS
+                        </span>
+                      ) : (
+                        <span className="text-brand-textMuted">YOLO11 Ready</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => navigate(`/jobs/${src.id}`)}
-                        className="p-1.5 hover:bg-campus-gold hover:text-campus-darkest text-campus-gold rounded transition border border-campus-gold/30"
-                        title="Open Annotated Video Viewer"
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleStartJob(src.id)}
+                          className="px-2.5 py-1 bg-brand-yellow hover:bg-brand-yellowHover text-brand-black text-xs font-black rounded flex items-center gap-1 shadow transition"
+                        >
+                          <Play className="w-3 h-3 fill-brand-black" />
+                          <span>{isRunning ? 'Restart' : 'Start'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/jobs/${src.id}`)}
+                          className="px-2.5 py-1 bg-brand-black border border-brand-border hover:border-brand-yellow text-brand-white text-xs font-bold rounded flex items-center gap-1 transition"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-brand-yellow" />
+                          <span>View</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 };
-
