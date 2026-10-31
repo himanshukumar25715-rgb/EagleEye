@@ -4,11 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { SourcesUpload } from './pages/SourcesUpload';
+import { CamerasMatrix } from './pages/CamerasMatrix';
+import { UploadFootage } from './pages/UploadFootage';
 import { VideoViewer } from './pages/VideoViewer';
 import { AlertQueue } from './pages/AlertQueue';
 import { AlertReview } from './pages/AlertReview';
 import { Analytics } from './pages/Analytics';
+import { Reports } from './pages/Reports';
 import { SettingsPage } from './pages/Settings';
 import { AdminAudit } from './pages/AdminAudit';
 import { useAuthStore } from './stores/authStore';
@@ -55,11 +57,14 @@ export default function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="sources" element={<SourcesUpload />} />
+            <Route path="cameras" element={<CamerasMatrix />} />
+            <Route path="sources" element={<CamerasMatrix />} />
+            <Route path="upload" element={<UploadFootage />} />
             <Route path="jobs/:id" element={<VideoViewer />} />
             <Route path="alerts" element={<AlertQueue />} />
             <Route path="alerts/:id" element={<AlertReview />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="reports" element={<Reports />} />
             <Route
               path="settings"
               element={

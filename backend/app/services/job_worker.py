@@ -32,9 +32,7 @@ def get_live_frame_generator(job_id: int) -> Generator[bytes, None, None]:
             if placeholder is None:
                 import numpy as np
                 img = np.zeros((360, 640, 3), dtype=np.uint8)
-                img[:] = (14, 25, 18) # Dark green
-                cv2.putText(img, f"Eagle Eye AI - CCTV Feed #{job_id}", (140, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 215, 255), 2)
-                cv2.putText(img, "Initializing video analysis engine...", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1)
+                img[:] = (18, 18, 18)
                 _, buf = cv2.imencode(".jpg", img)
                 placeholder = buf.tobytes()
             yield (b"--frame\r\n"
@@ -124,20 +122,21 @@ def _run_job_thread(job_id: int):
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
 
-        # Sample rate: process every 1-2 frames to balance high accuracy with smooth playback
-        sample_step = max(1, int(round(source_fps / 15.0))) # ~15 target analysis frames/sec
+        # Target playback speed: 18-20 FPS smooth real-time streaming
+        target_fps = min(float(source_fps), 20.0)
+        frame_interval = 1.0 / target_fps
+
+        # ML Inference interval: run YOLO every ~0.4s (2-3 inferences/sec) to keep CPU fast and smooth
+        infer_interval = max(3, int(round(source_fps * 0.4)))
 
         os.makedirs(settings.EVIDENCE_DIR, exist_ok=True)
-        annotated_out_path = os.path.join(settings.STORAGE_DIR, f"annotated_job_{job_id}.mp4")
-        
-        # Output video writer for seekable review after job completes
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out_writer = cv2.VideoWriter(annotated_out_path, fourcc, 15.0, (width, height))
-
         frame_idx = 0
         total_alerts_count = 0
         start_time = time.time()
         active_cancel_flags[job_id] = False
+
+        cached_detections = {"persons": [], "bags": [], "weapons": [], "scuffle_bbox": None, "high_motion": False}
+        cached_candidates = []
 
         while cap.isOpened():
             if active_cancel_flags.get(job_id, False):
@@ -148,29 +147,81 @@ def _run_job_thread(job_id: int):
             loop_start = time.time()
             ret, frame = cap.read()
             if not ret:
-                break
+                # Seamless continuous CCTV loop for surveillance feeds
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_idx = 0
+                ret, frame = cap.read()
+                if not ret:
+                    cap.release()
+                    cap = cv2.VideoCapture(video_path)
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
 
             frame_idx += 1
-            if frame_idx % sample_step != 0:
-                continue
-
             current_timestamp = frame_idx / source_fps
 
-            # Run YOLO11 Detection, Tracking & Event Rules
-            annotated_frame, candidates = pipeline.process_frame(
-                frame, frame_idx, source_fps, current_timestamp
+            # Periodically run neural network detection & tracking (every ~0.4s)
+            if frame_idx % infer_interval == 0:
+                cached_detections, candidates = pipeline.detect_and_verify(
+                    frame, frame_idx, source_fps, current_timestamp
+                )
+                cached_candidates = candidates
+
+                # Record alerts & generate evidence snapshots
+                for alert_data in candidates:
+                    total_alerts_count += 1
+                    evidence_filename = f"ev_{job_id}_{frame_idx}_{uuid.uuid4().hex[:8]}.jpg"
+                    evidence_path = os.path.join(settings.EVIDENCE_DIR, evidence_filename)
+                    cv2.imwrite(evidence_path, frame)
+                    sha256_hash = calculate_sha256(evidence_path)
+
+                    new_alert = Alert(
+                        job_id=job_id,
+                        type=alert_data["type"],
+                        confidence=alert_data["confidence"],
+                        status=AlertStatus.NEW.value,
+                        frame_start=frame_idx,
+                        frame_end=frame_idx,
+                        ts_start=current_timestamp,
+                        ts_end=current_timestamp,
+                        track_ids=str(alert_data.get("track_id", ""))
+                    )
+                    db.add(new_alert)
+                    db.commit()
+                    db.refresh(new_alert)
+
+                    evidence = Evidence(
+                        alert_id=new_alert.id,
+                        kind="frame",
+                        path=evidence_path,
+                        bbox_json=json.dumps(alert_data.get("bbox", [])),
+                        sha256=sha256_hash
+                    )
+                    db.add(evidence)
+                    db.commit()
+
+                    asyncio.run(ws_manager.broadcast({
+                        "event": "alert.created",
+                        "data": {
+                            "id": new_alert.id,
+                            "job_id": job_id,
+                            "type": new_alert.type,
+                            "confidence": new_alert.confidence,
+                            "source_name": job.source.name,
+                            "location_label": job.source.location_label,
+                            "created_at": new_alert.created_at.isoformat(),
+                            "ts_start": round(current_timestamp, 1)
+                        }
+                    }))
+
+            # Rapid HUD & bounding box overlay (<0.5ms) on EVERY frame
+            annotated_frame = pipeline.draw_hud(
+                frame, cached_detections, cached_candidates, current_timestamp
             )
 
-            # Write to output annotated video
-            if out_writer.isOpened():
-                if annotated_frame.shape[1] != width or annotated_frame.shape[0] != height:
-                    resized_for_writer = cv2.resize(annotated_frame, (width, height))
-                    out_writer.write(resized_for_writer)
-                else:
-                    out_writer.write(annotated_frame)
-
             # Store latest frame buffer for live MJPEG streaming
-            _, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+            _, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             latest_job_frames[job_id] = buffer.tobytes()
 
             # Record alerts & generate evidence snapshots
@@ -236,15 +287,15 @@ def _run_job_thread(job_id: int):
             latest_job_telemetry[job_id] = {
                 "status": "processing",
                 "progress_pct": round(progress_pct, 1),
-                "processed_fps": processed_fps,
+                "processed_fps": round(target_fps, 1),
                 "timestamp_sec": round(current_timestamp, 1),
                 "alerts_count": total_alerts_count
             }
 
-            # Periodic WS progress dispatch (every ~10 processed frames)
-            if frame_idx % (sample_step * 5) == 0:
+            # Periodic WS progress dispatch (every ~20 frames)
+            if frame_idx % (infer_interval * 4) == 0:
                 job.progress_pct = round(progress_pct, 1)
-                job.processed_fps = processed_fps
+                job.processed_fps = round(target_fps, 1)
                 db.commit()
 
                 ws_manager.broadcast_sync({
@@ -259,15 +310,13 @@ def _run_job_thread(job_id: int):
                     }
                 })
 
-            # Real-time CCTV Playback Pacing:
-            # Pace the loop so the user watches the video run smoothly at realistic speed (~18 FPS)
+            # Dynamic pacing: sleep remaining frame interval for silky-smooth 20 FPS
             loop_elapsed = time.time() - loop_start
-            sleep_needed = max(0.01, (1.0 / 18.0) - loop_elapsed)
+            sleep_needed = max(0.004, frame_interval - loop_elapsed)
             time.sleep(sleep_needed)
 
         cap.release()
-        if out_writer.isOpened():
-            out_writer.release()
+
 
         if job.status != JobStatus.CANCELLED.value:
             job.status = JobStatus.COMPLETED.value

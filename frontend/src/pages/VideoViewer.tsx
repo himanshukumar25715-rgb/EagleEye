@@ -1,28 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Play, 
-  Square, 
-  RotateCcw, 
-  Layers, 
-  MapPin, 
-  Cpu, 
-  Clock, 
-  CheckCircle2, 
-  AlertTriangle,
-  ArrowLeft,
-  Grid,
-  Radio,
-  ExternalLink,
-  ShieldAlert,
-  Flame,
-  Briefcase,
-  Users
-} from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 import { audioAlert } from '../utils/audioAlert';
-import { StatusBadge, TypeBadge } from '../components/Badges';
+import { TypeBadge } from '../components/Badges';
+import { VideoOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 export const VideoViewer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,11 +17,13 @@ export const VideoViewer: React.FC = () => {
   const [showMatrix, setShowMatrix] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const knownAlertIdsRef = React.useRef<Set<number>>(new Set());
+  const [streamError, setStreamError] = useState(false);
 
   const currentJobId = Number(id) || 1;
   const liveProgress = activeJobs[currentJobId];
 
   useEffect(() => {
+    setStreamError(false);
     fetchJobAndAlerts();
     loadAllSources();
 
@@ -83,7 +67,7 @@ export const VideoViewer: React.FC = () => {
     } catch {
       setJob({
         id: currentJobId,
-        source_name: `CCTV Surveillance Feed #${currentJobId}`,
+        source_name: `CCTV surveillance feed #${currentJobId}`,
         source_location: 'Campus Security Perimeter',
         status: 'processing',
         progress_pct: 0.0,
@@ -129,84 +113,73 @@ export const VideoViewer: React.FC = () => {
   const currentProgress = liveProgress?.progress_pct ?? job?.progress_pct ?? 0.0;
   const currentFps = liveProgress?.processed_fps ?? job?.processed_fps ?? 18.0;
 
-  // Stream URL with cache buster if restarted
-  const mjpegStreamUrl = `/api/v1/jobs/${currentJobId}/stream?t=${Date.now()}`;
-
   return (
     <div className="space-y-6">
       {/* Top Header & Feed Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/sources')}
-            className="p-2 rounded-lg bg-brand-card border border-brand-border hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white transition"
-            title="Back to Camera Feeds"
+            className="px-3 py-1.5 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white text-xs font-semibold transition"
           >
-            <ArrowLeft className="w-4 h-4" />
+            Back to camera feeds
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-brand-white tracking-tight">
-                {job?.source_name || `Camera Feed #${currentJobId}`}
+              <h2 className="text-xl font-semibold text-brand-white tracking-tight">
+                {job?.source_name || `Camera feed #${currentJobId}`}
               </h2>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono bg-brand-yellow/20 text-brand-yellow border border-brand-yellow/30 font-bold">
-                Live Feed #{currentJobId}
+              <span className="text-xs px-2.5 py-0.5 rounded-[12px] font-mono text-brand-accent shadow-[0_0_0_1px_#e6e3dc] bg-brand-card font-semibold">
+                Live feed #{currentJobId}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-brand-textMuted mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-brand-yellow" />
-              <span>{job?.source_location || 'Campus Surveillance Perimeter'}</span>
+            <div className="text-xs text-brand-textMuted mt-0.5 font-semibold">
+              {job?.source_location || 'Campus surveillance perimeter'}
             </div>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
-          {/* Feed Selector Dropdown */}
+        <div className="flex items-center gap-4">
           {allSources.length > 1 && (
             <select
               value={currentJobId}
               onChange={(e) => navigate(`/jobs/${e.target.value}`)}
-              className="px-3 py-1.5 bg-brand-card border border-brand-border rounded-lg text-xs text-brand-white focus:outline-none focus:border-brand-yellow font-medium"
+              className="px-3 py-1.5 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
             >
               {allSources.map((s) => (
                 <option key={s.id} value={s.id}>
-                  Switch Feed: {s.name}
+                  Switch feed: {s.name}
                 </option>
               ))}
             </select>
           )}
 
-          {/* Multi-view Grid Toggle */}
           <button
             onClick={() => setShowMatrix(!showMatrix)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition ${
+            className={`px-3 py-1.5 rounded-[12px] text-xs font-semibold shadow-[0_0_0_1px_#e6e3dc] transition ${
               showMatrix
-                ? 'bg-brand-yellow text-brand-black border-brand-yellow font-bold'
-                : 'bg-brand-card text-brand-textMuted border-brand-border hover:text-brand-white'
+                ? 'bg-brand-accent text-white'
+                : 'bg-brand-card text-brand-textMuted hover:text-brand-white'
             }`}
           >
-            <Grid className="w-3.5 h-3.5" />
-            <span>Multi-Cam Matrix</span>
+            Multi-camera matrix
           </button>
 
-          {/* Start / Restart / Cancel Button */}
           {currentStatus === 'processing' ? (
             <button
               onClick={handleStopAnalysis}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-brand-black text-brand-red border border-brand-red hover:bg-brand-red hover:text-brand-white flex items-center gap-1.5 transition shadow"
+              className="px-3.5 py-1.5 rounded-[12px] text-xs font-semibold bg-brand-card text-brand-red shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover transition"
             >
-              <Square className="w-3.5 h-3.5" />
-              <span>Stop Video</span>
+              Stop video
             </button>
           ) : (
             <button
               onClick={handleStartAnalysis}
               disabled={isStarting}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-yellow hover:bg-brand-yellowHover text-brand-black flex items-center gap-1.5 transition shadow"
+              className="px-4 py-1.5 rounded-[12px] text-xs font-semibold bg-brand-accent hover:bg-brand-accentHover text-white transition"
             >
-              <Play className="w-3.5 h-3.5 fill-brand-black" />
-              <span>{currentStatus === 'completed' ? 'Re-run Analysis' : 'Start Video Analysis'}</span>
+              {currentStatus === 'completed' ? 'Re-run analysis' : 'Start video analysis'}
             </button>
           )}
         </div>
@@ -214,16 +187,15 @@ export const VideoViewer: React.FC = () => {
 
       {/* MULTI-CAMERA MATRIX VIEW (when toggled) */}
       {showMatrix && allSources.length > 1 && (
-        <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3">
+        <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-brand-white text-xs uppercase tracking-wider flex items-center gap-2">
-              <Radio className="w-3.5 h-3.5 text-brand-yellow animate-pulse" />
-              <span>Concurrent CCTV Multi-Feed Matrix</span>
+            <h3 className="font-semibold text-brand-white text-xs">
+              Concurrent CCTV multi-feed matrix
             </h3>
-            <span className="text-[11px] text-brand-textMuted">Click any feed to focus</span>
+            <span className="text-xs text-brand-textMuted font-semibold">Click any feed to focus</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {allSources.map((s) => (
               <div
                 key={s.id}
@@ -231,8 +203,8 @@ export const VideoViewer: React.FC = () => {
                   setShowMatrix(false);
                   navigate(`/jobs/${s.id}`);
                 }}
-                className={`relative aspect-video rounded-lg overflow-hidden border cursor-pointer group bg-brand-black transition ${
-                  s.id === currentJobId ? 'border-brand-yellow ring-1 ring-brand-yellow' : 'border-brand-border hover:border-brand-yellow/60'
+                className={`relative aspect-video rounded-[12px] overflow-hidden shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group bg-neutral-900 transition ${
+                  s.id === currentJobId ? 'ring-2 ring-brand-accent' : ''
                 }`}
               >
                 <img
@@ -240,9 +212,8 @@ export const VideoViewer: React.FC = () => {
                   alt={s.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-brand-black/90 border border-brand-border text-[10px] font-bold text-brand-white flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow animate-pulse" />
-                  <span>{s.name}</span>
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-[12px] bg-black/80 text-xs font-semibold text-white">
+                  {s.name}
                 </div>
               </div>
             ))}
@@ -254,47 +225,57 @@ export const VideoViewer: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Live Video Stream & Player */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="relative aspect-video w-full rounded-2xl bg-brand-black border border-brand-border overflow-hidden shadow-2xl flex items-center justify-center">
-            {/* Live MJPEG Stream with YOLO11 detection overlays */}
-            <img
-              key={`${currentJobId}-${currentStatus}`}
-              src={`/api/v1/jobs/${currentJobId}/stream`}
-              alt="Live YOLO11 CCTV Stream"
-              className="w-full h-full object-contain"
-            />
+          <div className="relative aspect-video w-full rounded-[12px] bg-neutral-900 shadow-[0_0_0_1px_#e6e3dc] overflow-hidden flex items-center justify-center">
+            {/* Live MJPEG Stream or No-camera Fallback */}
+            {streamError ? (
+              <div className="flex flex-col items-center justify-center gap-2 select-none">
+                <div className="w-12 h-12 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-400">
+                  <VideoOff className="w-6 h-6 text-neutral-400" />
+                </div>
+                <span className="text-xs font-semibold text-neutral-400 font-mono tracking-wider uppercase">
+                  No camera
+                </span>
+              </div>
+            ) : (
+              <img
+                key={`${currentJobId}-${currentStatus}`}
+                src={`/api/v1/jobs/${currentJobId}/stream`}
+                alt="Live YOLO11 CCTV Stream"
+                className="w-full h-full object-contain"
+                onError={() => setStreamError(true)}
+              />
+            )}
 
             {/* Real-time HUD Status Overlay */}
-            <div className="absolute top-4 left-4 bg-brand-darkest/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-brand-border text-xs flex items-center gap-3 shadow-lg">
-              <div className="flex items-center gap-1.5 font-mono">
+            <div className="absolute top-4 left-4 bg-white/95 px-3 py-1.5 rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] text-xs flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    currentStatus === 'processing' ? 'bg-brand-red animate-ping' : 'bg-brand-yellow'
+                    currentStatus === 'processing' ? 'bg-brand-red animate-ping' : 'bg-brand-accent'
                   }`}
                 />
-                <span className="uppercase font-bold text-brand-white">
-                  {currentStatus === 'processing' ? 'AI ANALYZING LIVE' : currentStatus}
+                <span className="font-semibold text-brand-white">
+                  {currentStatus === 'processing' ? 'AI analyzing live' : currentStatus}
                 </span>
               </div>
               <span className="text-brand-border">|</span>
-              <div className="flex items-center gap-1 text-brand-yellow font-mono font-bold">
-                <Cpu className="w-3.5 h-3.5" />
-                <span>{currentFps} FPS</span>
-              </div>
+              <span className="text-brand-accent font-mono font-semibold">
+                {currentFps} FPS
+              </span>
             </div>
 
             {/* Live Model Badge (Top Right) */}
-            <div className="absolute top-4 right-4 bg-brand-darkest/90 backdrop-blur-md px-3 py-1 rounded-lg border border-brand-border text-[11px] font-mono text-brand-yellow font-bold">
+            <div className="absolute top-4 right-4 bg-white/95 px-3 py-1 rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] text-xs font-mono text-brand-white font-semibold">
               Ultralytics YOLO11n + ByteTrack
             </div>
 
             {/* Completed Seekable Video Replay Banner if finished */}
             {currentStatus === 'completed' && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-brand-darkest/95 backdrop-blur-md px-4 py-2 rounded-full border border-brand-yellow/60 text-xs flex items-center gap-3">
-                <CheckCircle2 className="w-4 h-4 text-brand-yellow" />
-                <span className="text-brand-white font-medium">Video Analysis Sequence Completed</span>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/95 px-4 py-2 rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] text-xs flex items-center gap-4">
+                <span className="text-brand-white font-semibold">Video analysis completed</span>
                 <button
                   onClick={handleStartAnalysis}
-                  className="px-2.5 py-0.5 rounded bg-brand-yellow text-brand-black font-bold hover:bg-brand-yellowHover"
+                  className="px-2.5 py-0.5 rounded-[12px] bg-brand-accent text-white font-semibold hover:bg-brand-accentHover"
                 >
                   Restart
                 </button>
@@ -303,64 +284,63 @@ export const VideoViewer: React.FC = () => {
           </div>
 
           {/* Real-time Telemetry & Pipeline Progress */}
-          <div className="p-4 rounded-xl bg-brand-card border border-brand-border space-y-3">
+          <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] space-y-4">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-brand-yellow" />
-                <span className="font-semibold text-brand-white">Video Progress:</span>
-                <span className="font-mono text-brand-textMuted">
+                <span className="font-semibold text-brand-white">Video progress:</span>
+                <span className="font-mono text-brand-textMuted font-semibold">
                   {((currentProgress / 100) * 60).toFixed(1)}s elapsed
                 </span>
               </div>
-              <span className="font-mono font-bold text-brand-yellow">{currentProgress.toFixed(1)}%</span>
+              <span className="font-mono font-semibold text-brand-accent">{currentProgress.toFixed(1)}%</span>
             </div>
 
-            <div className="w-full h-2.5 bg-brand-darkest rounded-full overflow-hidden border border-brand-border">
+            <div className="w-full h-2 bg-brand-dark rounded-full overflow-hidden">
               <div
-                className="h-full bg-brand-yellow transition-all duration-300"
+                className="h-full bg-brand-accent transition-all duration-300"
                 style={{ width: `${currentProgress}%` }}
               />
             </div>
 
             {/* Quick Metrics Bar */}
             <div className="grid grid-cols-3 gap-2 pt-1 text-center text-xs">
-              <div className="p-2 bg-brand-darkest rounded border border-brand-border">
-                <p className="text-[10px] text-brand-textMuted uppercase font-semibold">Live Mode</p>
-                <p className="font-bold text-brand-white mt-0.5">Real-Time CCTV</p>
+              <div className="p-2 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc]">
+                <p className="text-xs text-brand-textMuted font-semibold">Live mode</p>
+                <p className="font-semibold text-brand-white mt-0.5">Real-time CCTV</p>
               </div>
-              <div className="p-2 bg-brand-darkest rounded border border-brand-border">
-                <p className="text-[10px] text-brand-textMuted uppercase font-semibold">Threat Detection</p>
-                <p className="font-bold text-brand-yellow mt-0.5">Active</p>
+              <div className="p-2 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc]">
+                <p className="text-xs text-brand-textMuted font-semibold">Threat detection</p>
+                <p className="font-semibold text-brand-accent mt-0.5">Active</p>
               </div>
-              <div className="p-2 bg-brand-darkest rounded border border-brand-border">
-                <p className="text-[10px] text-brand-textMuted uppercase font-semibold">Incident Flags</p>
-                <p className="font-bold text-brand-white mt-0.5">{jobAlerts.length} Flagged</p>
+              <div className="p-2 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc]">
+                <p className="text-xs text-brand-textMuted font-semibold">Incident flags</p>
+                <p className="font-semibold text-brand-white mt-0.5">{jobAlerts.length} flagged</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right 1 Col: Live Real-Time Incident Stream */}
+        {/* Right 1 Col: Live Incident Stream */}
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-brand-card border border-brand-border h-full flex flex-col">
+          <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] h-full flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-brand-border">
-              <h3 className="font-semibold text-brand-white text-xs uppercase tracking-wider flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-brand-yellow" />
-                <span>Real-Time Incident Stream ({jobAlerts.length})</span>
+              <h3 className="font-semibold text-brand-white text-xs flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-brand-yellow" />
+                <span>Real-time incident stream ({jobAlerts.length})</span>
               </h3>
-              <span className="text-[10px] bg-brand-black text-brand-red px-2 py-0.5 rounded border border-brand-red font-bold">
-                Live Feed
+              <span className="text-xs text-brand-accent font-semibold">
+                Live feed
               </span>
             </div>
 
             {/* Real-time Alert Cards Queue */}
-            <div className="flex-1 overflow-y-auto space-y-2.5 mt-3 max-h-[520px] pr-1">
+            <div className="flex-1 overflow-y-auto space-y-2 mt-3 max-h-[520px] pr-1">
               {jobAlerts.length === 0 ? (
-                <div className="py-12 text-center text-xs text-brand-textMuted space-y-2">
+                <div className="py-12 text-center text-xs text-brand-textMuted space-y-2 font-semibold">
                   <ShieldAlert className="w-8 h-8 text-brand-border mx-auto" />
                   <p>Surveillance video running normally.</p>
-                  <p className="text-[11px] text-brand-textMuted/70">
-                    Incidents (weapons, fights, unattended objects, crowds) will appear here instantly when detected.
+                  <p className="text-xs text-brand-textMuted font-semibold">
+                    Incidents will appear here instantly when detected.
                   </p>
                 </div>
               ) : (
@@ -368,24 +348,23 @@ export const VideoViewer: React.FC = () => {
                   <div
                     key={al.id}
                     onClick={() => navigate(`/alerts/${al.id}`)}
-                    className="p-3 bg-brand-darkest rounded-lg border border-brand-border hover:border-brand-yellow cursor-pointer transition space-y-1.5 group"
+                    className="p-3 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover cursor-pointer transition space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <TypeBadge type={al.type} />
-                      <span className="text-[10px] font-mono text-brand-yellow font-bold">
+                      <span className="text-xs font-mono text-brand-accent font-semibold">
                         {(al.confidence * 100).toFixed(0)}%
                       </span>
                     </div>
 
-                    <div className="text-xs text-brand-white font-medium truncate">
+                    <div className="text-xs text-brand-white font-semibold truncate">
                       {al.location_label || job?.source_location}
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-brand-textMuted pt-1 border-t border-brand-border/50">
-                      <span>@{al.ts_start?.toFixed(1) || '0.0'}s in footage</span>
-                      <span className="text-brand-yellow group-hover:underline flex items-center gap-0.5 font-semibold">
+                    <div className="flex items-center justify-between text-xs text-brand-textMuted pt-2 border-t border-brand-border">
+                      <span className="font-semibold">@{al.ts_start?.toFixed(1) || '0.0'}s in footage</span>
+                      <span className="text-brand-accent hover:underline font-semibold">
                         Review
-                        <ExternalLink className="w-2.5 h-2.5" />
                       </span>
                     </div>
                   </div>

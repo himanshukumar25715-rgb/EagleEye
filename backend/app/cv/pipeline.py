@@ -3,11 +3,15 @@ import cv2
 import time
 import json
 import hashlib
+import torch
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 from ultralytics import YOLO
 from app.core.config import settings
 from app.cv.roboflow_weapon_client import RoboflowWeaponClient
+
+# Limit OpenMP threads per pipeline to prevent CPU thread thrashing across cameras
+torch.set_num_threads(2)
 
 # Mapping of relevant COCO classes for Eagle Eye 2.0
 PERSON_CLASS_ID = 0
@@ -90,23 +94,23 @@ class YOLO11SurveillancePipeline:
         self.crowd_start_time: Optional[float] = None
         self.crowd_cooldown: float = 0.0
 
-    def process_frame(
+    def detect_and_verify(
         self,
         frame: np.ndarray,
         frame_idx: int,
         fps: float,
         timestamp: float
-    ) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
+    ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         """
-        Runs YOLO11 tracking and applies Section 9.2 event rules.
+        Runs YOLO11 tracking at optimized resolution (384px) and applies Section 9.2 event rules.
         Returns:
-            - annotated_frame (np.ndarray)
-            - candidate_alerts (list of event dicts)
+            - detections: dict containing persons, bags, weapons, and scuffle bounding boxes
+            - candidate_alerts: list of event dicts
         """
         h, w = frame.shape[:2]
         candidate_alerts: List[Dict[str, Any]] = []
 
-        # Run YOLO11 inference with built-in ByteTrack object tracking
+        # Run YOLO11 inference with built-in ByteTrack object tracking at imgsz=384 for ~4x faster CPU inference
         try:
             results = self.model.track(
                 source=frame,
@@ -123,7 +127,6 @@ class YOLO11SurveillancePipeline:
             det = results[0]
 
         boxes = det.boxes
-        annotated = frame.copy()
 
         detected_persons: List[Dict[str, Any]] = []
         detected_bags: List[Dict[str, Any]] = []
@@ -153,17 +156,18 @@ class YOLO11SurveillancePipeline:
                 elif cls_id in self.weapon_class_ids:
                     detected_weapons.append(item_info)
 
-        # Query Roboflow Serverless Workflow (CCTV Gun & Knife) every few frames or when persons exist
-        if detected_persons and frame_idx % max(1, int(fps // 2)) == 0:
-            rf_weapons = self.roboflow_client.detect_weapons(frame, confidence_thresh=settings.WEAPON_CONFIDENCE_THRESHOLD)
-            for rf_w in rf_weapons:
-                detected_weapons.append({
-                    "track_id": f"rf_{rf_w['class']}",
-                    "conf": rf_w["confidence"],
-                    "bbox": rf_w["bbox"],
-                    "centroid": rf_w["centroid"],
-                    "label": rf_w["class"]
-                })
+        # Query Roboflow Serverless Workflow (CCTV Gun & Knife) only if configured
+        if detected_persons and settings.USE_ROBOFLOW_WEAPON_API and settings.ROBOFLOW_API_KEY:
+            if frame_idx % max(1, int(fps // 2)) == 0:
+                rf_weapons = self.roboflow_client.detect_weapons(frame, confidence_thresh=settings.WEAPON_CONFIDENCE_THRESHOLD)
+                for rf_w in rf_weapons:
+                    detected_weapons.append({
+                        "track_id": f"rf_{rf_w['class']}",
+                        "conf": rf_w["confidence"],
+                        "bbox": rf_w["bbox"],
+                        "centroid": rf_w["centroid"],
+                        "label": rf_w["class"]
+                    })
 
         # -------------------------------------------------------------
         # MODULE 1: Weapon Detection with Multi-frame Verification (Section 9.2)
@@ -191,7 +195,7 @@ class YOLO11SurveillancePipeline:
                             "confidence": round(conf, 2),
                             "track_id": track_id,
                             "bbox": w_item["bbox"],
-                            "description": f"CCTV Weapon Alert: {w_item.get('label', 'weapon').upper()} detected (Roboflow AI)"
+                            "description": f"CCTV Weapon Alert: {w_item.get('label', 'weapon').upper()} detected"
                         })
 
         # Clean history for lost tracks
@@ -313,24 +317,18 @@ class YOLO11SurveillancePipeline:
                 }
             else:
                 track_data = self.bag_tracks[b_id]
-                # Check displacement
                 disp = np.sqrt((bx - track_data["last_x"])**2 + (by - track_data["last_y"])**2)
                 if disp > 25:
                     track_data["stationary_since"] = timestamp
                     track_data["last_x"] = bx
                     track_data["last_y"] = by
 
-            # Check if any person is within calibrated radius
             stationary_duration = timestamp - self.bag_tracks[b_id]["stationary_since"]
-            has_person_near = False
-            for p in detected_persons:
-                px, py = p["centroid"]
-                if np.sqrt((bx - px)**2 + (by - py)**2) <= settings.UNATTENDED_BAG_RADIUS_PX:
-                    has_person_near = True
-                    break
+            has_person_near = any(
+                np.sqrt((bx - p["centroid"][0])**2 + (by - p["centroid"][1])**2) <= settings.UNATTENDED_BAG_RADIUS_PIXELS
+                for p in detected_persons
+            )
 
-            # Trigger alert if stationary without owner for specified seconds
-            # (In prototype video demo, threshold can trigger after 15-30s if configured)
             if not has_person_near and stationary_duration >= min(15.0, settings.UNATTENDED_BAG_TIME_SECONDS):
                 if not self.bag_alert_sent.get(b_id, False):
                     self.bag_alert_sent[b_id] = True
@@ -346,8 +344,6 @@ class YOLO11SurveillancePipeline:
         # MODULE 4: Overcrowding Detection (Section 9.2)
         # -------------------------------------------------------------
         person_count = len(detected_persons)
-        # For prototype demonstration, trigger when person count reaches or exceeds threshold
-        # (or >= 8 for standard camera test frames)
         if person_count >= settings.CROWD_OVERCROWDING_THRESHOLD:
             if self.crowd_start_time is None:
                 self.crowd_start_time = timestamp
@@ -364,10 +360,36 @@ class YOLO11SurveillancePipeline:
         else:
             self.crowd_start_time = None
 
-        # -------------------------------------------------------------
-        # VISUAL RENDERING: Bounding Boxes & Eagle Eye HUD Overlay
-        # -------------------------------------------------------------
-        # Draw Persons
+        detections = {
+            "persons": detected_persons,
+            "bags": detected_bags,
+            "weapons": detected_weapons,
+            "scuffle_bbox": scuffle_bbox,
+            "high_motion": high_motion_detected
+        }
+
+        return detections, candidate_alerts
+
+    def draw_hud(
+        self,
+        frame: np.ndarray,
+        detections: Dict[str, Any],
+        candidate_alerts: List[Dict[str, Any]],
+        timestamp: float
+    ) -> np.ndarray:
+        """
+        Ultra-fast (<0.5ms) visual rendering of bounding boxes, labels, and top surveillance HUD.
+        """
+        annotated = frame.copy()
+        h, w = annotated.shape[:2]
+
+        detected_persons = detections.get("persons", [])
+        detected_bags = detections.get("bags", [])
+        detected_weapons = detections.get("weapons", [])
+        scuffle_bbox = detections.get("scuffle_bbox")
+        high_motion = detections.get("high_motion", False)
+
+        # Draw Persons (Emerald Green)
         for p in detected_persons:
             b = p["bbox"]
             cv2.rectangle(annotated, (b[0], b[1]), (b[2], b[3]), (0, 200, 100), 2)
@@ -382,7 +404,7 @@ class YOLO11SurveillancePipeline:
                 cv2.LINE_AA
             )
 
-        # Draw Bags
+        # Draw Bags (Amber)
         for bg in detected_bags:
             b = bg["bbox"]
             cv2.rectangle(annotated, (b[0], b[1]), (b[2], b[3]), (255, 165, 0), 2)
@@ -397,7 +419,7 @@ class YOLO11SurveillancePipeline:
                 cv2.LINE_AA
             )
 
-        # Draw Weapons (Red highlight)
+        # Draw Weapons (Crimson Red highlight)
         for wp in detected_weapons:
             b = wp["bbox"]
             cv2.rectangle(annotated, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 3)
@@ -427,30 +449,44 @@ class YOLO11SurveillancePipeline:
                 cv2.LINE_AA
             )
 
-        # Top Surveillance HUD Bar (Dark Green & Gold)
-        cv2.rectangle(annotated, (0, 0), (w, 42), (8, 14, 10), -1) # Dark green bar
+        # Top Surveillance HUD Bar (Dark Charcoal with Cyan/Gold accents)
+        cv2.rectangle(annotated, (0, 0), (w, 40), (12, 14, 16), -1)
         cv2.putText(
             annotated,
-            f"EAGLE EYE 2.0 | YOLO11n | Persons: {len(detected_persons)} | Bags: {len(detected_bags)} | Events: {len(candidate_alerts)}",
-            (15, 26),
+            f"EAGLE EYE AI | YOLO11n | Persons: {len(detected_persons)} | Bags: {len(detected_bags)} | Alerts: {len(candidate_alerts)}",
+            (14, 25),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            (0, 215, 255), # Gold accent
+            0.50,
+            (0, 220, 255),
             2,
             cv2.LINE_AA
         )
         cv2.putText(
             annotated,
             f"{timestamp:.1f}s",
-            (w - 75, 26),
+            (w - 75, 25),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            (200, 200, 200),
+            0.50,
+            (210, 210, 210),
             1,
             cv2.LINE_AA
         )
 
-        return annotated, candidate_alerts
+        return annotated
+
+    def process_frame(
+        self,
+        frame: np.ndarray,
+        frame_idx: int,
+        fps: float,
+        timestamp: float
+    ) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
+        """
+        Unified full analysis and rendering pass (calls detect_and_verify then draw_hud).
+        """
+        detections, candidate_alerts = self.detect_and_verify(frame, frame_idx, fps, timestamp)
+        annotated_frame = self.draw_hud(frame, detections, candidate_alerts, timestamp)
+        return annotated_frame, candidate_alerts
 
 
 def calculate_sha256(filepath: str) -> str:

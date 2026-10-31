@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Filter, 
-  Search, 
-  ExternalLink, 
-  SlidersHorizontal, 
-  RefreshCw,
-  BellRing
-} from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { StatusBadge, TypeBadge } from '../components/Badges';
 
@@ -83,40 +75,35 @@ export const AlertQueue: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-brand-white tracking-tight flex items-center gap-2">
-            <BellRing className="w-6 h-6 text-brand-yellow" />
-            <span>Incident Alert Queue</span>
+          <h2 className="text-2xl font-semibold text-brand-white tracking-tight">
+            Incident alert queue
           </h2>
-          <p className="text-sm text-brand-textMuted mt-1">
+          <p className="text-xs text-brand-textMuted mt-1">
             Filter, inspect and escalate AI candidate detections requiring human verification.
           </p>
         </div>
         <button
           onClick={fetchAlerts}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-card hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white rounded-lg text-xs font-semibold border border-brand-border transition"
+          className="px-3 py-1.5 bg-brand-card hover:bg-brand-cardHover text-brand-textMuted hover:text-brand-white rounded-[12px] text-xs font-semibold shadow-[0_0_0_1px_#e6e3dc] transition"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+          {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="p-4 rounded-xl bg-brand-card border border-brand-border flex flex-wrap items-center gap-4 text-xs">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-brand-yellow" />
-          <span className="font-semibold text-brand-white uppercase tracking-wider">Filters:</span>
-        </div>
+      <div className="p-4 rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] flex flex-wrap items-center gap-4 text-xs">
+        <span className="font-semibold text-brand-white">Filters:</span>
 
         <div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-1.5 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow font-medium"
+            className="px-3 py-1.5 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
           >
-            <option value="">All Event Types</option>
+            <option value="">All event types</option>
             <option value="weapon">Weapon</option>
-            <option value="fight">Fight / Violence</option>
-            <option value="unattended_object">Unattended Object</option>
+            <option value="fight">Fight / violence</option>
+            <option value="unattended_object">Unattended object</option>
             <option value="overcrowding">Overcrowding</option>
           </select>
         </div>
@@ -125,21 +112,21 @@ export const AlertQueue: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 bg-brand-darkest border border-brand-border rounded-lg text-brand-white focus:outline-none focus:border-brand-yellow font-medium"
+            className="px-3 py-1.5 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
           >
-            <option value="">All Review Statuses</option>
+            <option value="">All review statuses</option>
             <option value="new">New</option>
-            <option value="in_review">In Review</option>
+            <option value="in_review">In review</option>
             <option value="confirmed">Confirmed</option>
-            <option value="false_alarm">False Alarm</option>
+            <option value="false_alarm">False alarm</option>
             <option value="escalated">Escalated</option>
             <option value="closed">Closed</option>
           </select>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-brand-textMuted">Min Confidence:</span>
-          <span className="font-mono text-brand-yellow font-bold">{(minConfidence * 100).toFixed(0)}%</span>
+          <span className="text-brand-textMuted font-semibold">Min confidence:</span>
+          <span className="font-mono text-brand-accent font-semibold">{(minConfidence * 100).toFixed(0)}%</span>
           <input
             type="range"
             min="0.3"
@@ -147,23 +134,23 @@ export const AlertQueue: React.FC = () => {
             step="0.05"
             value={minConfidence}
             onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
-            className="w-24 accent-brand-yellow"
+            className="w-24 accent-brand-accent"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl bg-brand-card border border-brand-border overflow-hidden">
+      <div className="rounded-[12px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-brand-dark text-xs uppercase tracking-wider text-brand-textMuted border-b border-brand-border">
+            <thead className="bg-brand-card text-xs text-brand-textMuted border-b border-brand-border font-semibold">
               <tr>
                 <th className="py-3 px-4">Alert ID</th>
-                <th className="py-3 px-4">Event Type</th>
-                <th className="py-3 px-4">Location / Camera</th>
+                <th className="py-3 px-4">Event type</th>
+                <th className="py-3 px-4">Location / camera</th>
                 <th className="py-3 px-4">Confidence</th>
                 <th className="py-3 px-4">Track IDs</th>
-                <th className="py-3 px-4">Verification Status</th>
+                <th className="py-3 px-4">Verification status</th>
                 <th className="py-3 px-4">Triggered</th>
                 <th className="py-3 px-4 text-right">Review</th>
               </tr>
@@ -178,18 +165,18 @@ export const AlertQueue: React.FC = () => {
               ) : (
                 alerts.map((al) => (
                   <tr key={al.id} className="hover:bg-brand-cardHover transition">
-                    <td className="py-3 px-4 font-mono text-xs text-brand-yellow font-bold">
+                    <td className="py-3 px-4 font-mono text-xs text-brand-accent font-semibold">
                       #{al.id}
                     </td>
                     <td className="py-3 px-4">
                       <TypeBadge type={al.type} />
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-bold text-brand-white">{al.location_label}</div>
+                      <div className="font-semibold text-brand-white text-sm">{al.location_label}</div>
                       <div className="text-xs text-brand-textMuted">{al.source_name}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-bold text-brand-white font-mono">
+                      <div className="font-semibold text-brand-white font-mono text-xs">
                         {(al.confidence * 100).toFixed(0)}%
                       </div>
                     </td>
@@ -205,10 +192,9 @@ export const AlertQueue: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => navigate(`/alerts/${al.id}`)}
-                        className="px-3 py-1 bg-brand-black hover:bg-brand-yellow hover:text-brand-black text-xs font-bold text-brand-yellow border border-brand-yellow/40 rounded transition flex items-center gap-1 ml-auto"
+                        className="px-3 py-1 bg-brand-card hover:bg-brand-accent hover:text-white text-xs font-semibold text-brand-accent shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] transition ml-auto"
                       >
-                        <span>Review</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        Review
                       </button>
                     </td>
                   </tr>
@@ -221,4 +207,3 @@ export const AlertQueue: React.FC = () => {
     </div>
   );
 };
-
