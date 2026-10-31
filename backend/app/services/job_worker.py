@@ -110,17 +110,7 @@ def _run_job_thread(job_id: int):
                         video_path = os.path.abspath(cp)
                         break
             cap = cv2.VideoCapture(video_path)
-        else:
-            if not os.path.isabs(video_path) and not os.path.exists(video_path):
-                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-                alt_path = os.path.join(base_dir, video_path.lstrip('./\\'))
-                if os.path.exists(alt_path):
-                    video_path = alt_path
-                else:
-                    uploads_alt = os.path.join(settings.STORAGE_DIR, 'uploads', os.path.basename(video_path))
-                    if os.path.exists(uploads_alt):
-                        video_path = uploads_alt
-            cap = cv2.VideoCapture(video_path)
+
 
         if not cap.isOpened():
             job.status = JobStatus.FAILED.value
