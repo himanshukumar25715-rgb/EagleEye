@@ -12,6 +12,26 @@ from app.services.job_worker import cancel_job, get_live_frame_generator, queue_
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
+@router.get("", response_model=List[JobResponse])
+def get_jobs(
+    source_id: Optional[int] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(Job)
+    if source_id:
+        query = query.filter(Job.source_id == source_id)
+    jobs = query.order_by(Job.created_at.desc()).limit(limit).all()
+    results = []
+    for j in jobs:
+        resp = JobResponse.from_orm(j)
+        if j.source:
+            resp.source_name = j.source.name
+            resp.source_location = j.source.location_label
+        results.append(resp)
+    return results
+
 @router.get("/active", response_model=List[JobResponse])
 def get_active_jobs(
     db: Session = Depends(get_db),

@@ -207,40 +207,25 @@ class YOLO11SurveillancePipeline:
                     })
 
         # -------------------------------------------------------------
-        # MODULE 1: Weapon Detection with Multi-frame Verification (Section 9.2)
+        # MODULE 1: Weapon Threat Detection (Section 9.2)
         # -------------------------------------------------------------
-        current_frame_weapon_ids = set()
         for w_item in detected_weapons:
-            track_id = w_item["track_id"]
             conf = w_item["conf"]
-            current_frame_weapon_ids.add(track_id)
+            w_label = str(w_item.get("label", "weapon")).upper()
+            w_thresh = getattr(settings, 'WEAPON_CONFIDENCE_THRESHOLD', 0.35)
 
-            if conf >= settings.WEAPON_CONFIDENCE_THRESHOLD:
-                history = self.weapon_history.get(track_id, [])
-                history.append(True)
-                if len(history) > 5:
-                    history.pop(0)
-                self.weapon_history[track_id] = history
-
-                # Multi-frame rule: seen in at least 3 of last 5 frames
-                if sum(history) >= settings.WEAPON_MIN_FRAMES_IN_LAST_5:
-                    last_alert = self.weapon_cooldown.get(track_id, 0.0)
-                    if (timestamp - last_alert) >= settings.WEAPON_COOLDOWN_SECONDS:
-                        self.weapon_cooldown[track_id] = timestamp
-                        candidate_alerts.append({
-                            "type": "weapon",
-                            "confidence": round(conf, 2),
-                            "track_id": track_id,
-                            "bbox": w_item["bbox"],
-                            "description": f"CCTV Weapon Threat: {w_item.get('label', 'weapon').upper()} detected ({int(conf * 100)}%)"
-                        })
-
-        # Clean history for lost tracks
-        for trk in list(self.weapon_history.keys()):
-            if trk not in current_frame_weapon_ids:
-                self.weapon_history[trk].append(False)
-                if len(self.weapon_history[trk]) > 5:
-                    self.weapon_history[trk].pop(0)
+            if conf >= w_thresh:
+                # Cooldown by weapon class to prevent duplicate alert spamming
+                last_alert = self.weapon_cooldown.get(w_label, 0.0)
+                if (timestamp - last_alert) >= getattr(settings, 'WEAPON_COOLDOWN_SECONDS', 15):
+                    self.weapon_cooldown[w_label] = timestamp
+                    candidate_alerts.append({
+                        "type": "weapon",
+                        "confidence": round(conf, 2),
+                        "track_id": f"WPN-{w_label}",
+                        "bbox": w_item["bbox"],
+                        "description": f"CCTV Weapon Threat: {w_label} detected ({int(conf * 100)}%)"
+                    })
 
         # -------------------------------------------------------------
         # MODULE 2: Fight / Violence Proximity & Motion Dynamics (Section 9.2)
@@ -321,7 +306,7 @@ class YOLO11SurveillancePipeline:
             self.fight_score = max(0.0, self.fight_score - 0.4)
 
         # Trigger alert when fight energy persists across ~1.0-1.5s window or high-confidence DL detection
-        if self.fight_score >= 3.6 or (fight_cls_conf >= 0.70 and scuffle_bbox is not None):
+        if self.fight_score >= 2.4 or (fight_cls_conf >= 0.55 and scuffle_bbox is not None):
             if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
                 self.fight_cooldown = timestamp
                 calc_conf = min(0.98, max(round(fight_cls_conf, 2), round(0.75 + (self.fight_score / 10.0) * 0.22, 2)))
@@ -362,7 +347,7 @@ class YOLO11SurveillancePipeline:
 
             stationary_duration = timestamp - self.bag_tracks[b_id]["stationary_since"]
             has_person_near = any(
-                np.sqrt((bx - p["centroid"][0])**2 + (by - p["centroid"][1])**2) <= settings.UNATTENDED_BAG_RADIUS_PIXELS
+                np.sqrt((bx - p["centroid"][0])**2 + (by - p["centroid"][1])**2) <= getattr(settings, "UNATTENDED_BAG_RADIUS_PX", 150)
                 for p in detected_persons
             )
 

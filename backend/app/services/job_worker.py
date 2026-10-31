@@ -161,8 +161,8 @@ def _run_job_thread(job_id: int):
             frame_idx += 1
             current_timestamp = frame_idx / source_fps
 
-            # Periodically run neural network detection & tracking (every ~0.4s)
-            if frame_idx % infer_interval == 0:
+            # Periodically run neural network detection & tracking (every ~0.3-0.4s)
+            if frame_idx == 1 or frame_idx % infer_interval == 0:
                 cached_detections, candidates = pipeline.detect_and_verify(
                     frame, frame_idx, source_fps, current_timestamp
                 )
@@ -201,7 +201,8 @@ def _run_job_thread(job_id: int):
                     db.add(evidence)
                     db.commit()
 
-                    asyncio.run(ws_manager.broadcast({
+                    # Broadcast instant alert notification over WebSocket (thread-safe)
+                    ws_manager.broadcast_sync({
                         "event": "alert.created",
                         "data": {
                             "id": new_alert.id,
@@ -213,7 +214,14 @@ def _run_job_thread(job_id: int):
                             "created_at": new_alert.created_at.isoformat(),
                             "ts_start": round(current_timestamp, 1)
                         }
-                    }))
+                    })
+
+                    # Play non-blocking OS audio alert sound upon incident transmission
+                    try:
+                        import winsound
+                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                    except Exception:
+                        pass
 
             # Rapid HUD & bounding box overlay (<0.5ms) on EVERY frame
             annotated_frame = pipeline.draw_hud(
@@ -223,61 +231,6 @@ def _run_job_thread(job_id: int):
             # Store latest frame buffer for live MJPEG streaming
             _, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             latest_job_frames[job_id] = buffer.tobytes()
-
-            # Record alerts & generate evidence snapshots
-            for alert_data in candidates:
-                total_alerts_count += 1
-                evidence_filename = f"ev_{job_id}_{frame_idx}_{uuid.uuid4().hex[:8]}.jpg"
-                evidence_path = os.path.join(settings.EVIDENCE_DIR, evidence_filename)
-                cv2.imwrite(evidence_path, annotated_frame)
-                sha256_hash = calculate_sha256(evidence_path)
-
-                new_alert = Alert(
-                    job_id=job_id,
-                    type=alert_data["type"],
-                    confidence=alert_data["confidence"],
-                    status=AlertStatus.NEW.value,
-                    frame_start=frame_idx,
-                    frame_end=frame_idx,
-                    ts_start=current_timestamp,
-                    ts_end=current_timestamp,
-                    track_ids=str(alert_data.get("track_id", ""))
-                )
-                db.add(new_alert)
-                db.commit()
-                db.refresh(new_alert)
-
-                evidence = Evidence(
-                    alert_id=new_alert.id,
-                    kind="frame",
-                    path=evidence_path,
-                    bbox_json=json.dumps(alert_data.get("bbox", [])),
-                    sha256=sha256_hash
-                )
-                db.add(evidence)
-                db.commit()
-
-                # Broadcast instant alert notification over WebSocket
-                ws_manager.broadcast_sync({
-                    "event": "alert.created",
-                    "data": {
-                        "id": new_alert.id,
-                        "job_id": job_id,
-                        "type": new_alert.type,
-                        "confidence": new_alert.confidence,
-                        "source_name": job.source.name,
-                        "location_label": job.source.location_label,
-                        "created_at": new_alert.created_at.isoformat(),
-                        "ts_start": round(current_timestamp, 1)
-                    }
-                })
-
-                # Play non-blocking OS audio alert sound upon incident transmission
-                try:
-                    import winsound
-                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                except Exception:
-                    pass
 
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
