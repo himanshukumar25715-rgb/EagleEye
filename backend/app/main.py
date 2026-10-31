@@ -72,12 +72,15 @@ def seed_initial_data():
                 ))
         db.commit()
 
-        # 4 Core Camera Sources with realistic CCTV footage
+        # 4 Core Camera Sources configured per user requirements:
+        # CAM-01: Default live phone camera
+        # CAM-02: Submitted fight incident detection video
+        # CAM-03 & CAM-04: Default campus surveillance videos
         sample_cameras = [
-            (1, "Main Entrance Gate 1", "Campus Gate 1 - North Boundary", "storage/uploads/sample_gate.mp4"),
-            (2, "North Perimeter Walkway", "North Walkway - Sector B", "storage/uploads/sample_corridor.mp4"),
+            (1, "CAM-01 (Live Phone Camera)", "Live Mobile Demo Stream", "http://192.168.137.22:8080/video"),
+            (2, "CAM-02 (Fight Video)", "North Perimeter Walkway", "storage/uploads/fight_0001.mp4"),
             (3, "Hostel Block A Lobby", "Hostel Block A - Ground Floor", "storage/uploads/sample_hostel.mp4"),
-            (4, "Dining Hall Corridor", "Central Mess and Dining Wing", "storage/uploads/sample_hall.mp4"),
+            (4, "CAM-04 (Demo 3)", "Campus Security Zone", "D:/sanchay/EagleEye/backend/storage/uploads/demo3.mp4"),
         ]
 
         for s_id, s_name, s_loc, s_path in sample_cameras:

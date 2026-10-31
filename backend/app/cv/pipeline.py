@@ -10,8 +10,8 @@ from ultralytics import YOLO
 from app.core.config import settings
 from app.cv.roboflow_weapon_client import RoboflowWeaponClient
 
-# Limit OpenMP threads per pipeline to prevent CPU thread thrashing across cameras
-torch.set_num_threads(2)
+# 4 threads gives best balance for live single-camera inference
+torch.set_num_threads(4)
 
 # Mapping of relevant COCO classes for Eagle Eye 2.0
 PERSON_CLASS_ID = 0
@@ -40,7 +40,9 @@ class YOLO11SurveillancePipeline:
                 weights_path = "yolo11n.pt"
 
         print(f"[EagleEye YOLO11] Initializing neural network from {weights_path}...")
-        self.model = YOLO(weights_path)
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.model = YOLO(weights_path).to(self.device)
+        print(f"[EagleEye YOLO11] Acceleration device active: {self.device.upper()} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
         self.roboflow_client = RoboflowWeaponClient()
 
         # Dynamically map class indices according to model taxonomy (works with COCO or ABODA)
@@ -84,6 +86,8 @@ class YOLO11SurveillancePipeline:
         self.fight_candidate_start: Optional[float] = None
         self.fight_cooldown: float = 0.0
         self.fight_score: float = 0.0
+        self.last_fight_overlay_ts: float = 0.0
+        self.last_fight_scuffle_bbox: Optional[List[int]] = None
 
         # Module 3: Unattended Bag state:
         # bag_id -> {"first_seen": ts, "stationary_since": ts, "last_x": x, "last_y": y}
@@ -117,13 +121,14 @@ class YOLO11SurveillancePipeline:
                 persist=True,
                 tracker="bytetrack.yaml",
                 verbose=False,
-                conf=0.20,
-                imgsz=640
+                conf=0.25,
+                imgsz=480,
+                device=self.device
             )
             det = results[0]
         except Exception:
             # Fallback to standard detect if tracking fails
-            results = self.model(source=frame, verbose=False, conf=0.20, imgsz=640)
+            results = self.model(source=frame, verbose=False, conf=0.25, imgsz=480, device=self.device)
             det = results[0]
 
         boxes = det.boxes
@@ -284,7 +289,12 @@ class YOLO11SurveillancePipeline:
             self.fight_score = max(0.0, self.fight_score - 0.4)
 
         # Trigger alert when fight energy persists across ~1.0-1.5s window or high-confidence DL detection
-        if self.fight_score >= 3.6 or (fight_cls_conf >= 0.70 and scuffle_bbox is not None):
+        if self.fight_score >= 2.2 or (fight_cls_conf >= 0.60 and scuffle_bbox is not None) or high_motion_detected:
+            self.last_fight_overlay_ts = timestamp
+            if scuffle_bbox is not None:
+                self.last_fight_scuffle_bbox = scuffle_bbox
+
+        if self.fight_score >= 3.0 or (fight_cls_conf >= 0.70 and scuffle_bbox is not None):
             if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
                 self.fight_cooldown = timestamp
                 calc_conf = min(0.98, max(round(fight_cls_conf, 2), round(0.75 + (self.fight_score / 10.0) * 0.22, 2)))
@@ -434,17 +444,23 @@ class YOLO11SurveillancePipeline:
                 cv2.LINE_AA
             )
 
-        # Draw Scuffle highlight if active
-        if self.fight_score >= 2.0 and scuffle_bbox:
-            sb = scuffle_bbox
-            cv2.rectangle(annotated, (sb[0], sb[1]), (sb[2], sb[3]), (0, 0, 255), 3)
+        # Latch Fight Alert HUD Overlay for at least 6.0 seconds so security guards can observe it clearly
+        is_fight_active = (self.fight_score >= 2.0 and scuffle_bbox) or ((timestamp - self.last_fight_overlay_ts) < 6.0 and self.last_fight_overlay_ts > 0)
+        display_bbox = scuffle_bbox if scuffle_bbox is not None else self.last_fight_scuffle_bbox
+
+        if is_fight_active and display_bbox:
+            sb = display_bbox
+            # Bold high-contrast red warning boundary
+            cv2.rectangle(annotated, (sb[0], sb[1]), (sb[2], sb[3]), (0, 0, 255), 4)
+            # Pulsing top danger badge
+            cv2.rectangle(annotated, (sb[0], max(0, sb[1] - 32)), (min(w, sb[0] + 360), sb[1]), (0, 0, 220), -1)
             cv2.putText(
                 annotated,
-                f"! WARNING: PHYSICAL FIGHT DETECTED ({int(self.fight_score*10)}%) !",
-                (sb[0], max(25, sb[1] - 8)),
+                f"CRITICAL: PHYSICAL FIGHT ALERT",
+                (sb[0] + 6, max(20, sb[1] - 10)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.60,
-                (0, 0, 255),
+                0.55,
+                (255, 255, 255),
                 2,
                 cv2.LINE_AA
             )

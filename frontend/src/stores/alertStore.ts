@@ -74,7 +74,7 @@ export const useAlertStore = create<AlertStoreState>((set, get) => ({
                 },
               ],
             }));
-            setTimeout(() => get().removeToast(toastId), 6000);
+            setTimeout(() => get().removeToast(toastId), 14000);
           } else if (payload.event === 'job.progress') {
             const data: JobProgress = payload.data;
             set((state) => ({

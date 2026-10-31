@@ -22,22 +22,26 @@ active_threads: Dict[int, threading.Thread] = {}
 
 def get_live_frame_generator(job_id: int) -> Generator[bytes, None, None]:
     """Generates MJPEG boundary frames for the web viewer in real-time"""
-    placeholder = None
+    waited = 0.0
+    while job_id not in latest_job_frames:
+        time.sleep(0.1)
+        waited += 0.1
+        if waited > 2.0:
+            # Yield nothing so stream terminates and frontend displays clean NO CAMERA
+            return
+
+    missed_count = 0
     while True:
         frame_bytes = latest_job_frames.get(job_id)
         if frame_bytes:
+            missed_count = 0
             yield (b"--frame\r\n"
                    b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
         else:
-            if placeholder is None:
-                import numpy as np
-                img = np.zeros((360, 640, 3), dtype=np.uint8)
-                img[:] = (18, 18, 18)
-                _, buf = cv2.imencode(".jpg", img)
-                placeholder = buf.tobytes()
-            yield (b"--frame\r\n"
-                   b"Content-Type: image/jpeg\r\n\r\n" + placeholder + b"\r\n")
-        time.sleep(0.05)  # ~20 fps streaming
+            missed_count += 1
+            if missed_count > 15:  # ~0.3s without frames -> stream stopped
+                return
+        time.sleep(0.02)  # fast stream loop
 
 def get_job_telemetry(job_id: int) -> Dict[str, Any]:
     return latest_job_telemetry.get(job_id, {
@@ -88,11 +92,16 @@ def _run_job_thread(job_id: int):
         video_path = job.source.path_or_uri
         is_stream_url = video_path.startswith(('http://', 'https://', 'rtsp://', 'rtmp://'))
         is_device_idx = video_path.isdigit()
+        is_live = is_stream_url or is_device_idx
 
         if is_device_idx:
             cap = cv2.VideoCapture(int(video_path))
+            # Minimize buffer for live feeds to avoid frame lag/freeze
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         elif is_stream_url:
-            cap = cv2.VideoCapture(video_path)
+            cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+            # Minimize buffer for live feeds to avoid frame lag/freeze
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         else:
             if not os.path.exists(video_path):
                 candidate_paths = [
@@ -111,10 +120,9 @@ def _run_job_thread(job_id: int):
                         break
             cap = cv2.VideoCapture(video_path)
 
-
         if not cap.isOpened():
             job.status = JobStatus.FAILED.value
-            job.error = f"Could not decode video file: {video_path}"
+            job.error = f"Could not open video/stream: {video_path}"
             db.commit()
             ws_manager.broadcast_sync({
                 "event": "job.failed",
@@ -127,21 +135,28 @@ def _run_job_thread(job_id: int):
             total_frames = 1000
 
         source_fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+        # Live MJPEG streams often report 0 FPS — default to 20
+        if source_fps < 1.0:
+            source_fps = 20.0
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
 
-        # Target playback speed: 18-20 FPS smooth real-time streaming
-        target_fps = min(float(source_fps), 20.0)
+        # 25 FPS for live streams, 20 FPS for recorded video
+        target_fps = min(float(source_fps), 28.0)
         frame_interval = 1.0 / target_fps
 
-        # ML Inference interval: run YOLO every ~0.4s (2-3 inferences/sec) to keep CPU fast and smooth
-        infer_interval = max(3, int(round(source_fps * 0.4)))
+        # Live: infer every 2 frames (~10/sec). Recorded: every ~0.4s
+        if is_live:
+            infer_interval = 2
+        else:
+            infer_interval = max(3, int(round(source_fps * 0.4)))
 
         os.makedirs(settings.EVIDENCE_DIR, exist_ok=True)
         frame_idx = 0
         total_alerts_count = 0
         start_time = time.time()
         active_cancel_flags[job_id] = False
+        consecutive_failures = 0  # track read failures for live streams
 
         cached_detections = {"persons": [], "bags": [], "weapons": [], "scuffle_bbox": None, "high_motion": False}
         cached_candidates = []
@@ -153,18 +168,40 @@ def _run_job_thread(job_id: int):
                 break
 
             loop_start = time.time()
+
+            # For live streams: flush stale buffered frames by grabs before the real read
+            if is_live:
+                cap.grab()  # discard oldest buffered frame
+
             ret, frame = cap.read()
             if not ret:
-                # Seamless continuous CCTV loop for surveillance feeds
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                frame_idx = 0
-                ret, frame = cap.read()
-                if not ret:
-                    cap.release()
-                    cap = cv2.VideoCapture(video_path)
+                consecutive_failures += 1
+                if is_live:
+                    # Live stream: temporary hiccup — try to reconnect after 3 failures
+                    if consecutive_failures >= 3:
+                        cap.release()
+                        time.sleep(0.5)
+                        if is_device_idx:
+                            cap = cv2.VideoCapture(int(video_path))
+                            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        else:
+                            cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+                            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        consecutive_failures = 0
+                    continue
+                else:
+                    # Recorded file: seamless continuous CCTV loop
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    frame_idx = 0
                     ret, frame = cap.read()
                     if not ret:
-                        break
+                        cap.release()
+                        cap = cv2.VideoCapture(video_path)
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+            else:
+                consecutive_failures = 0
 
             frame_idx += 1
             current_timestamp = frame_idx / source_fps
@@ -176,7 +213,7 @@ def _run_job_thread(job_id: int):
                 )
                 cached_candidates = candidates
 
-                # Record alerts & generate evidence snapshots
+                # Record alerts & generate evidence snapshots (ONCE, here only)
                 for alert_data in candidates:
                     total_alerts_count += 1
                     evidence_filename = f"ev_{job_id}_{frame_idx}_{uuid.uuid4().hex[:8]}.jpg"
@@ -209,7 +246,8 @@ def _run_job_thread(job_id: int):
                     db.add(evidence)
                     db.commit()
 
-                    asyncio.run(ws_manager.broadcast({
+                    # Broadcast instant alert notification over WebSocket
+                    ws_manager.broadcast_sync({
                         "event": "alert.created",
                         "data": {
                             "id": new_alert.id,
@@ -221,76 +259,35 @@ def _run_job_thread(job_id: int):
                             "created_at": new_alert.created_at.isoformat(),
                             "ts_start": round(current_timestamp, 1)
                         }
-                    }))
+                    })
+
+                    # Play non-blocking OS audio alert sound upon incident transmission
+                    try:
+                        import winsound
+                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                    except Exception:
+                        pass
 
             # Rapid HUD & bounding box overlay (<0.5ms) on EVERY frame
             annotated_frame = pipeline.draw_hud(
                 frame, cached_detections, cached_candidates, current_timestamp
             )
 
-            # Store latest frame buffer for live MJPEG streaming
-            _, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            # Store latest frame buffer for ultra-fast, unlagging MJPEG streaming
+            h_f, w_f = annotated_frame.shape[:2]
+            if w_f > 640:
+                scale = 640.0 / w_f
+                preview_frame = cv2.resize(annotated_frame, (640, int(h_f * scale)), interpolation=cv2.INTER_NEAREST)
+            else:
+                preview_frame = annotated_frame
+
+            encode_q = 55 if is_live else 65
+            _, buffer = cv2.imencode(".jpg", preview_frame, [int(cv2.IMWRITE_JPEG_QUALITY), encode_q])
             latest_job_frames[job_id] = buffer.tobytes()
-
-            # Record alerts & generate evidence snapshots
-            for alert_data in candidates:
-                total_alerts_count += 1
-                evidence_filename = f"ev_{job_id}_{frame_idx}_{uuid.uuid4().hex[:8]}.jpg"
-                evidence_path = os.path.join(settings.EVIDENCE_DIR, evidence_filename)
-                cv2.imwrite(evidence_path, annotated_frame)
-                sha256_hash = calculate_sha256(evidence_path)
-
-                new_alert = Alert(
-                    job_id=job_id,
-                    type=alert_data["type"],
-                    confidence=alert_data["confidence"],
-                    status=AlertStatus.NEW.value,
-                    frame_start=frame_idx,
-                    frame_end=frame_idx,
-                    ts_start=current_timestamp,
-                    ts_end=current_timestamp,
-                    track_ids=str(alert_data.get("track_id", ""))
-                )
-                db.add(new_alert)
-                db.commit()
-                db.refresh(new_alert)
-
-                evidence = Evidence(
-                    alert_id=new_alert.id,
-                    kind="frame",
-                    path=evidence_path,
-                    bbox_json=json.dumps(alert_data.get("bbox", [])),
-                    sha256=sha256_hash
-                )
-                db.add(evidence)
-                db.commit()
-
-                # Broadcast instant alert notification over WebSocket
-                ws_manager.broadcast_sync({
-                    "event": "alert.created",
-                    "data": {
-                        "id": new_alert.id,
-                        "job_id": job_id,
-                        "type": new_alert.type,
-                        "confidence": new_alert.confidence,
-                        "source_name": job.source.name,
-                        "location_label": job.source.location_label,
-                        "created_at": new_alert.created_at.isoformat(),
-                        "ts_start": round(current_timestamp, 1)
-                    }
-                })
-
-                # Play non-blocking OS audio alert sound upon incident transmission
-                try:
-                    import winsound
-                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                except Exception:
-                    pass
 
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
             elapsed = max(0.001, time.time() - start_time)
-            processed_fps = round(frame_idx / elapsed, 1)
 
             latest_job_telemetry[job_id] = {
                 "status": "processing",
@@ -319,12 +316,13 @@ def _run_job_thread(job_id: int):
                 })
 
             # Dynamic pacing: sleep remaining frame interval for silky-smooth 20 FPS
-            loop_elapsed = time.time() - loop_start
-            sleep_needed = max(0.004, frame_interval - loop_elapsed)
-            time.sleep(sleep_needed)
+            # For live streams, skip sleep to drain buffer as fast as possible
+            if not is_live:
+                loop_elapsed = time.time() - loop_start
+                sleep_needed = max(0.004, frame_interval - loop_elapsed)
+                time.sleep(sleep_needed)
 
         cap.release()
-
 
         if job.status != JobStatus.CANCELLED.value:
             job.status = JobStatus.COMPLETED.value

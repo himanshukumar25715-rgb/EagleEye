@@ -44,19 +44,23 @@ class Settings(BaseSettings):
     USE_ROBOFLOW_WEAPON_API: bool = True
 
     # AI Pipeline Tuning defaults (from Section 9.2)
-    WEAPON_CONFIDENCE_THRESHOLD: float = 0.50
-    WEAPON_MIN_FRAMES_IN_LAST_5: int = 3
+    # --- Weapon ---
+    WEAPON_CONFIDENCE_THRESHOLD: float = 0.65   # was 0.50 → fewer false weapon alerts
+    WEAPON_MIN_FRAMES_IN_LAST_5: int = 4         # was 3 → needs 4/5 frames confirmation
     WEAPON_COOLDOWN_SECONDS: int = 30
-    
-    FIGHT_CONFIDENCE_THRESHOLD: float = 0.60
-    FIGHT_WINDOW_SECONDS: float = 2.0
-    FIGHT_COOLDOWN_SECONDS: int = 10
-    
-    UNATTENDED_BAG_RADIUS_PX: int = 150
-    UNATTENDED_BAG_TIME_SECONDS: int = 60
-    
-    CROWD_OVERCROWDING_THRESHOLD: int = 15
-    CROWD_DURATION_SECONDS: int = 10
+
+    # --- Fight / Violence ---
+    FIGHT_CONFIDENCE_THRESHOLD: float = 0.70     # was 0.60 → stricter fight trigger
+    FIGHT_WINDOW_SECONDS: float = 2.5             # was 2.0 → needs slightly longer proximity
+    FIGHT_COOLDOWN_SECONDS: int = 15              # was 10 → fewer repeat alerts
+
+    # --- Unattended Bag ---
+    UNATTENDED_BAG_RADIUS_PX: int = 180          # was 150 → larger owner proximity zone
+    UNATTENDED_BAG_TIME_SECONDS: int = 90        # was 60 → bag must be alone for 90s
+
+    # --- Overcrowding ---
+    CROWD_OVERCROWDING_THRESHOLD: int = 8        # was 15 → realistic for a campus cam (demo: 3+ people)
+    CROWD_DURATION_SECONDS: int = 6              # was 10 → triggers faster once threshold met
 
     # SMTP & Automated Email Reporting (Loaded exclusively from .env)
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")

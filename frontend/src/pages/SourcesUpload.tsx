@@ -258,7 +258,7 @@ export const SourcesUpload: React.FC = () => {
                   setFocusedCam(cam);
                 }
               }}
-              className="relative h-full w-full rounded-[12px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition"
+              className="relative h-full w-full rounded-[4px] overflow-hidden bg-neutral-950 shadow-[0_0_0_1px_#e6e3dc] cursor-pointer group flex flex-col justify-between p-2.5 transition"
             >
               {/* Camera Background Video or Clean No-Camera CCTV Canvas */}
               {cam.sourceId ? (
@@ -572,21 +572,21 @@ export const SourcesUpload: React.FC = () => {
                     onClick={() => setStreamUrlInput('0')}
                     className="px-2.5 py-1 text-[11px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[8px] text-brand-accent font-semibold"
                   >
-                    Laptop Webcam (0)
+                    💻 Laptop Webcam
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStreamUrlInput('http://192.168.1.50:8080/video')}
+                    onClick={() => setStreamUrlInput('http://192.168.137.22:8080/video')}
                     className="px-2.5 py-1 text-[11px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[8px] text-brand-white font-semibold"
                   >
-                    IP Webcam (8080)
+                    📱 IP Webcam · 137.22:8080
                   </button>
                   <button
                     type="button"
-                    onClick={() => setStreamUrlInput('http://192.168.1.50:4747/video')}
+                    onClick={() => setStreamUrlInput('http://192.168.137.22:4747/video')}
                     className="px-2.5 py-1 text-[11px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[8px] text-brand-white font-semibold"
                   >
-                    DroidCam (4747)
+                    📱 DroidCam · 137.22:4747
                   </button>
                 </div>
               </div>
