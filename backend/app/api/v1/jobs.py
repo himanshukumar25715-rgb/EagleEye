@@ -12,6 +12,38 @@ from app.services.job_worker import cancel_job, get_live_frame_generator, queue_
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
+def resolve_job(id_or_source_id: int, db: Session) -> Optional[Job]:
+    source = db.query(Source).filter(Source.id == id_or_source_id).first()
+    if source:
+        latest_job = db.query(Job).filter(Job.source_id == source.id).order_by(Job.id.desc()).first()
+        if latest_job:
+            return latest_job
+    job = db.query(Job).filter(Job.id == id_or_source_id).first()
+    if job:
+        return job
+    return db.query(Job).filter(Job.source_id == id_or_source_id).order_by(Job.id.desc()).first()
+
+
+@router.get("", response_model=List[JobResponse])
+def get_jobs(
+    source_id: Optional[int] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(Job)
+    if source_id:
+        query = query.filter(Job.source_id == source_id)
+    jobs = query.order_by(Job.created_at.desc()).limit(limit).all()
+    results = []
+    for j in jobs:
+        resp = JobResponse.from_orm(j)
+        if j.source:
+            resp.source_name = j.source.name
+            resp.source_location = j.source.location_label
+        results.append(resp)
+    return results
+
 @router.get("/active", response_model=List[JobResponse])
 def get_active_jobs(
     db: Session = Depends(get_db),
@@ -34,7 +66,7 @@ def get_job(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = resolve_job(job_id, db)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
@@ -51,7 +83,7 @@ def start_job(
     current_user: User = Depends(require_operator)
 ):
     """Explicitly triggers or re-runs video analysis on a CCTV feed"""
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = resolve_job(job_id, db)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -91,11 +123,11 @@ def cancel_job_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_operator)
 ):
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = resolve_job(job_id, db)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    cancel_job(job_id)
+    cancel_job(job.id)
     job.status = JobStatus.CANCELLED.value
     db.commit()
 
@@ -113,12 +145,12 @@ def cancel_job_endpoint(
 @router.get("/{job_id}/stream")
 def stream_mjpeg(job_id: int, db: Session = Depends(get_db)):
     """Annotated live MJPEG stream with real-time YOLO11 bounding overlays"""
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = resolve_job(job_id, db)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     return StreamingResponse(
-        get_live_frame_generator(job_id),
+        get_live_frame_generator(job.id),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
@@ -129,11 +161,11 @@ def get_processed_video(
     db: Session = Depends(get_db)
 ):
     """Serves the annotated MP4 (if generated) or source video with byte-range seek support"""
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = resolve_job(job_id, db)
     if not job or not job.source:
         raise HTTPException(status_code=404, detail="Job or video source not found")
     
-    annotated_path = os.path.join(settings.STORAGE_DIR, f"annotated_job_{job_id}.mp4")
+    annotated_path = os.path.join(settings.STORAGE_DIR, f"annotated_job_{job.id}.mp4")
     video_path = annotated_path if os.path.exists(annotated_path) else job.source.path_or_uri
 
     if not os.path.exists(video_path):

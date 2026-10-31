@@ -106,6 +106,7 @@ class AlertResponse(AlertBase):
     review_note: Optional[str] = None
     created_at: datetime
     evidence_items: List[EvidenceResponse] = []
+    source_id: Optional[int] = None
     source_name: Optional[str] = None
     location_label: Optional[str] = None
     class Config:

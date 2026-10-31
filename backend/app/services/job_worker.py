@@ -32,7 +32,7 @@ def get_live_frame_generator(job_id: int) -> Generator[bytes, None, None]:
 
     missed_count = 0
     while True:
-        frame_bytes = latest_job_frames.get(job_id)
+        frame_bytes = latest_job_frames.get(job_id) or latest_job_frames.get(f"src_{job_id}")
         if frame_bytes:
             missed_count = 0
             yield (b"--frame\r\n"
@@ -82,6 +82,7 @@ def _run_job_thread(job_id: int):
             "event": "job.progress",
             "data": {
                 "job_id": job_id,
+                "source_id": job.source_id,
                 "progress_pct": 0.0,
                 "status": "processing",
                 "source_name": job.source.name,
@@ -206,8 +207,8 @@ def _run_job_thread(job_id: int):
             frame_idx += 1
             current_timestamp = frame_idx / source_fps
 
-            # Periodically run neural network detection & tracking (every ~0.4s)
-            if frame_idx % infer_interval == 0:
+            # Periodically run neural network detection & tracking (every ~0.3-0.4s)
+            if frame_idx == 1 or frame_idx % infer_interval == 0:
                 cached_detections, candidates = pipeline.detect_and_verify(
                     frame, frame_idx, source_fps, current_timestamp
                 )
@@ -246,12 +247,13 @@ def _run_job_thread(job_id: int):
                     db.add(evidence)
                     db.commit()
 
-                    # Broadcast instant alert notification over WebSocket
+                    # Broadcast instant alert notification over WebSocket (thread-safe)
                     ws_manager.broadcast_sync({
                         "event": "alert.created",
                         "data": {
                             "id": new_alert.id,
                             "job_id": job_id,
+                            "source_id": job.source_id,
                             "type": new_alert.type,
                             "confidence": new_alert.confidence,
                             "source_name": job.source.name,
@@ -284,6 +286,8 @@ def _run_job_thread(job_id: int):
             encode_q = 55 if is_live else 65
             _, buffer = cv2.imencode(".jpg", preview_frame, [int(cv2.IMWRITE_JPEG_QUALITY), encode_q])
             latest_job_frames[job_id] = buffer.tobytes()
+            if job.source_id:
+                latest_job_frames[f"src_{job.source_id}"] = buffer.tobytes()
 
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
@@ -307,6 +311,7 @@ def _run_job_thread(job_id: int):
                     "event": "job.progress",
                     "data": {
                         "job_id": job_id,
+                        "source_id": job.source_id,
                         "progress_pct": job.progress_pct,
                         "processed_fps": job.processed_fps,
                         "timestamp_sec": round(current_timestamp, 1),

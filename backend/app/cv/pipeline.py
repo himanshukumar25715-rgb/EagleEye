@@ -236,7 +236,6 @@ class YOLO11SurveillancePipeline:
         # MODULE 1: Weapon Detection (Immediate Tactical Alerting)
         # -------------------------------------------------------------
         for w_item in detected_weapons:
-            track_id = w_item["track_id"]
             conf = w_item["conf"]
             w_label = str(w_item.get("label", "weapon")).upper()
 
@@ -444,7 +443,7 @@ class YOLO11SurveillancePipeline:
 
             stationary_duration = timestamp - self.bag_tracks[b_id]["stationary_since"]
             has_person_near = any(
-                np.sqrt((bx - p["centroid"][0])**2 + (by - p["centroid"][1])**2) <= settings.UNATTENDED_BAG_RADIUS_PX
+                np.sqrt((bx - p["centroid"][0])**2 + (by - p["centroid"][1])**2) <= getattr(settings, "UNATTENDED_BAG_RADIUS_PX", 180)
                 for p in detected_persons
             )
 
