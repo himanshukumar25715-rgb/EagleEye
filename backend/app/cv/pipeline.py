@@ -50,19 +50,20 @@ class YOLO11SurveillancePipeline:
             core = ov.Core()
             available = core.available_devices
 
-            # Probe 1: Intel AI Boost NPU
+            # Probe 1: Intel AI Boost NPU (Pure Neural Processing Unit)
             if "NPU" in available:
                 try:
                     test_xml = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11n_openvino_model", "yolo11n.xml")
                     if os.path.exists(test_xml):
                         m = core.read_model(test_xml)
+                        m.reshape([1, 3, 384, 384])
                         core.compile_model(m, "NPU")
                         self.device = "intel:npu"
                         self.is_openvino = True
                         self.active_accel_name = f"Intel AI Boost NPU ({core.get_property('NPU', 'FULL_DEVICE_NAME')})"
                         self.active_accel_tag = "Intel NPU"
-                except Exception:
-                    pass
+                except Exception as npu_probe_err:
+                    print(f"[EagleEye Hardware Acceleration] NPU probe info: {npu_probe_err}")
 
             # Probe 2: Intel Arc GPU (Xe Matrix Hardware Acceleration)
             if not self.is_openvino and "GPU" in available:

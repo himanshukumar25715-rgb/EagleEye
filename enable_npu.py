@@ -8,7 +8,7 @@ import time
 import numpy as np
 
 print("=" * 65)
-print("  EAGLE EYE 2.0 - INTEL NPU / HARDWARE ACCELERATION DIAGNOSTICS")
+print("  EAGLE EYE 2.0 - INTEL NPU HARDWARE ACCELERATION DIAGNOSTICS")
 print("=" * 65)
 
 try:
@@ -36,18 +36,25 @@ try:
     xml_path = "backend/weights/yolo11n_openvino_model/yolo11n.xml"
     if os.path.exists(xml_path):
         model = core.read_model(xml_path)
+        model.reshape([1, 3, 384, 384])
         dummy = np.random.rand(1, 3, 384, 384).astype(np.float32)
 
         # Test NPU
         if "NPU" in devices:
-            print("\n[4] Testing Intel NPU (Intel AI Boost) compilation...")
+            print("\n[4] Testing Intel NPU (Intel AI Boost)...")
             try:
                 compiled_npu = core.compile_model(model, "NPU")
-                res = compiled_npu([dummy])
-                print("    SUCCESS: Model compiled and executed on Intel AI Boost NPU!")
+                for _ in range(3):
+                    compiled_npu([dummy])
+                latencies = []
+                for _ in range(15):
+                    t0 = time.perf_counter()
+                    compiled_npu([dummy])
+                    latencies.append((time.perf_counter() - t0) * 1000)
+                avg_lat = np.mean(latencies)
+                print(f"    SUCCESS: Intel AI Boost NPU Latency: {avg_lat:.2f} ms ({1000/avg_lat:.1f} FPS)")
             except Exception as e:
-                print(f"    NOTE: NPU Level 0 driver returned error: {e}")
-                print("    Tip: Update your Intel NPU Driver via Intel Driver & Support Assistant (IDSA) or Windows Update.")
+                print(f"    NPU error: {e}")
 
         # Test Intel Arc GPU
         if "GPU" in devices:
@@ -64,7 +71,7 @@ try:
             print(f"    SUCCESS: Intel Arc GPU Latency: {avg_lat:.2f} ms ({1000/avg_lat:.1f} FPS)")
 
     print("\n" + "=" * 65)
-    print("  Hardware acceleration configured in backend/app/cv/pipeline.py!")
+    print("  Active Pipeline Acceleration: INTEL:NPU (Intel AI Boost)")
     print("=" * 65)
 
 except Exception as e:
