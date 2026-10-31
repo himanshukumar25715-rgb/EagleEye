@@ -45,9 +45,11 @@ export const AdminAudit: React.FC = () => {
   }, []);
 
   const users = [
-    { id: 1, name: 'Security Administrator', email: 'admin@eagleeye.edu', role: 'admin', status: 'Active' },
-    { id: 2, name: 'Desk Operator (Ctrl+Shift+Go)', email: 'operator@eagleeye.edu', role: 'operator', status: 'Active' },
-    { id: 3, name: 'Staff Viewer', email: 'viewer@eagleeye.edu', role: 'viewer', status: 'Active' },
+    { id: 1, name: 'College Admin', email: 'college.admin@eagleeye.edu', role: 'admin', status: 'Active' },
+    { id: 2, name: 'Owner', email: 'owner@eagleeye.edu', role: 'admin', status: 'Active' },
+    { id: 3, name: 'Security Room 1', email: 'security.room1@eagleeye.edu', role: 'operator', status: 'Active' },
+    { id: 4, name: 'Desk Operator', email: 'operator@eagleeye.edu', role: 'operator', status: 'Active' },
+    { id: 5, name: 'Staff Viewer', email: 'viewer@eagleeye.edu', role: 'viewer', status: 'Active' },
   ];
 
   return (

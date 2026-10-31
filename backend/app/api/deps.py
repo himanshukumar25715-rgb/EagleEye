@@ -15,12 +15,15 @@ def get_current_user(
     # 1. Check Bearer token if provided
     if token:
         # Dev / prototype tokens
-        if token in ["mock_admin_token"]:
+        if token in ["mock_admin_token", "mock_college_admin_token"]:
             admin_user = db.query(User).filter(User.role == UserRole.ADMIN.value).first()
             if admin_user: return admin_user
-        elif token in ["demo_token", "mock_operator_token"]:
-            op_user = db.query(User).filter(User.role == UserRole.OPERATOR.value).first()
-            if op_user: return op_user
+        elif token in ["mock_owner_token"]:
+            owner_user = db.query(User).filter(User.role == UserRole.OWNER.value).first()
+            if owner_user: return owner_user
+        elif token in ["mock_security_token", "mock_operator_token", "demo_token"]:
+            sec_user = db.query(User).filter(User.role.in_([UserRole.SECURITY_ROOM.value, UserRole.OPERATOR.value])).first()
+            if sec_user: return sec_user
         elif token in ["mock_viewer_token"]:
             view_user = db.query(User).filter(User.role == UserRole.VIEWER.value).first()
             if view_user: return view_user
@@ -59,7 +62,9 @@ def require_role(roles: list[str]):
         return current_user
     return role_checker
 
-require_admin = require_role([UserRole.ADMIN.value])
-require_operator = require_role([UserRole.ADMIN.value, UserRole.OPERATOR.value])
-require_viewer = require_role([UserRole.ADMIN.value, UserRole.OPERATOR.value, UserRole.VIEWER.value])
+require_admin = require_role([UserRole.ADMIN.value, UserRole.OWNER.value])
+require_owner = require_role([UserRole.OWNER.value, UserRole.ADMIN.value])
+require_security_room = require_role([UserRole.SECURITY_ROOM.value, UserRole.OPERATOR.value, UserRole.ADMIN.value, UserRole.OWNER.value])
+require_operator = require_role([UserRole.ADMIN.value, UserRole.OWNER.value, UserRole.OPERATOR.value, UserRole.SECURITY_ROOM.value])
+require_viewer = require_role([UserRole.ADMIN.value, UserRole.OWNER.value, UserRole.OPERATOR.value, UserRole.SECURITY_ROOM.value, UserRole.VIEWER.value])
 

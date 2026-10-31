@@ -6,6 +6,8 @@ from app.db.session import Base
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
+    OWNER = "owner"
+    SECURITY_ROOM = "security_room"
     OPERATOR = "operator"
     VIEWER = "viewer"
 

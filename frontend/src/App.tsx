@@ -6,6 +6,9 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { CamerasMatrix } from './pages/CamerasMatrix';
 import { UploadFootage } from './pages/UploadFootage';
+import { CollegeAdminPortal } from './pages/CollegeAdminPortal';
+import { OwnerPortal } from './pages/OwnerPortal';
+import { SecurityRoomPortal } from './pages/SecurityRoomPortal';
 import { VideoViewer } from './pages/VideoViewer';
 import { AlertQueue } from './pages/AlertQueue';
 import { AlertReview } from './pages/AlertReview';
@@ -24,7 +27,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute: React.FC<{ children: React.ReactElement; requiredRole?: string }> = ({
+const ProtectedRoute: React.FC<{ children: React.ReactElement; requiredRole?: string | string[] }> = ({
   children,
   requiredRole,
 }) => {
@@ -34,8 +37,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement; requiredRole?: st
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to="/" replace />;
+  if (requiredRole) {
+    const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (user?.role && !allowed.includes(user.role)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;
@@ -60,6 +66,30 @@ export default function App() {
             <Route path="cameras" element={<CamerasMatrix />} />
             <Route path="sources" element={<CamerasMatrix />} />
             <Route path="upload" element={<UploadFootage />} />
+            <Route
+              path="college-admin"
+              element={
+                <ProtectedRoute requiredRole={['admin', 'owner']}>
+                  <CollegeAdminPortal />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="owner"
+              element={
+                <ProtectedRoute requiredRole={['owner', 'admin']}>
+                  <OwnerPortal />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="security-room-1"
+              element={
+                <ProtectedRoute requiredRole={['security_room', 'operator', 'admin', 'owner']}>
+                  <SecurityRoomPortal />
+                </ProtectedRoute>
+              }
+            />
             <Route path="jobs/:id" element={<VideoViewer />} />
             <Route path="alerts" element={<AlertQueue />} />
             <Route path="alerts/:id" element={<AlertReview />} />

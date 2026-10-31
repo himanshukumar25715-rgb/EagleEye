@@ -30,12 +30,14 @@ export const Login: React.FC = () => {
 
       navigate('/');
     } catch (err: any) {
-      if (email.includes('admin')) {
-        login('mock_admin_token', { name: 'Security Administrator', email, role: 'admin' });
-      } else if (email.includes('viewer')) {
-        login('mock_viewer_token', { name: 'Staff Viewer', email, role: 'viewer' });
+      if (email.includes('owner')) {
+        login('mock_owner_token', { name: 'Owner', email, role: 'admin' });
+      } else if (email.includes('admin')) {
+        login('mock_admin_token', { name: 'College Admin', email, role: 'admin' });
+      } else if (email.includes('security') || email.includes('operator')) {
+        login('mock_sec_token', { name: 'Security Room 1', email, role: 'operator' });
       } else {
-        login('mock_operator_token', { name: 'Desk Operator (Ctrl+Shift+Go)', email, role: 'operator' });
+        login('mock_viewer_token', { name: 'Staff Viewer', email, role: 'viewer' });
       }
       navigate('/');
     } finally {
@@ -109,29 +111,32 @@ export const Login: React.FC = () => {
           {/* Quick Demo Credentials Switcher */}
           <div className="pt-2 border-t border-brand-border">
             <p className="text-xs font-semibold text-brand-textMuted mb-2">
-              Quick role presets (testing)
+              Quick institutional profiles
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setPreset('admin@eagleeye.edu', 'admin123')}
-                className="py-1 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-accent font-semibold"
+                onClick={() => setPreset('college.admin@eagleeye.edu', 'admin123')}
+                className="py-1.5 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-accent font-semibold truncate"
+                title="College Admin (admin123)"
               >
-                Admin
+                College Admin
               </button>
               <button
                 type="button"
-                onClick={() => setPreset('operator@eagleeye.edu', 'operator123')}
-                className="py-1 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-white font-semibold"
+                onClick={() => setPreset('owner@eagleeye.edu', 'owner123')}
+                className="py-1.5 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-white font-semibold truncate"
+                title="Owner (owner123)"
               >
-                Operator
+                Owner
               </button>
               <button
                 type="button"
-                onClick={() => setPreset('viewer@eagleeye.edu', 'viewer123')}
-                className="py-1 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-textMuted font-semibold"
+                onClick={() => setPreset('security.room1@eagleeye.edu', 'security123')}
+                className="py-1.5 px-2 text-xs bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[12px] text-brand-textMuted font-semibold truncate"
+                title="Security Room 1 (security123)"
               >
-                Viewer
+                Security Room 1
               </button>
             </div>
           </div>

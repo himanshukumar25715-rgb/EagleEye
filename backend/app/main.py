@@ -34,7 +34,7 @@ def seed_initial_data():
         admin = db.query(User).filter(User.email == "admin@eagleeye.edu").first()
         if not admin:
             admin = User(
-                name="Security Administrator",
+                name="College Admin",
                 email="admin@eagleeye.edu",
                 password_hash=get_password_hash("admin123"),
                 role=UserRole.ADMIN.value
@@ -54,6 +54,23 @@ def seed_initial_data():
             db.add_all([admin, operator, viewer])
             db.commit()
             db.refresh(admin)
+
+        # Ensure College Admin, Owner, and Security Room 1 profiles are always seeded
+        institutional_profiles = [
+            ("College Admin", "college.admin@eagleeye.edu", "admin123", UserRole.ADMIN.value),
+            ("Owner", "owner@eagleeye.edu", "owner123", UserRole.ADMIN.value),
+            ("Security Room 1", "security.room1@eagleeye.edu", "security123", UserRole.OPERATOR.value),
+        ]
+        for name, email, pw, role in institutional_profiles:
+            if not db.query(User).filter(User.email == email).first():
+                db.add(User(
+                    name=name,
+                    email=email,
+                    password_hash=get_password_hash(pw),
+                    role=role,
+                    is_active=True
+                ))
+        db.commit()
 
         # 4 Core Camera Sources with realistic CCTV footage
         sample_cameras = [
