@@ -169,7 +169,7 @@ class YOLO11SurveillancePipeline:
                     detected_weapons.append(item_info)
 
         # Local Weapon Model Inference (Runs high-speed offline verification)
-        if self.weapon_model and frame_idx % max(1, int(fps // 5)) == 0:
+        if self.weapon_model:
             try:
                 w_conf_thresh = getattr(settings, 'WEAPON_CONFIDENCE_THRESHOLD', 0.25) or 0.25
                 w_results = self.weapon_model.predict(
@@ -212,7 +212,7 @@ class YOLO11SurveillancePipeline:
         for w_item in detected_weapons:
             conf = w_item["conf"]
             w_label = str(w_item.get("label", "weapon")).upper()
-            w_thresh = getattr(settings, 'WEAPON_CONFIDENCE_THRESHOLD', 0.35)
+            w_thresh = min(0.25, getattr(settings, 'WEAPON_CONFIDENCE_THRESHOLD', 0.25))
 
             if conf >= w_thresh:
                 # Cooldown by weapon class to prevent duplicate alert spamming
@@ -306,7 +306,7 @@ class YOLO11SurveillancePipeline:
             self.fight_score = max(0.0, self.fight_score - 0.4)
 
         # Trigger alert when fight energy persists across ~1.0-1.5s window or high-confidence DL detection
-        if self.fight_score >= 2.4 or (fight_cls_conf >= 0.55 and scuffle_bbox is not None):
+        if (self.fight_score >= 2.0 and scuffle_bbox is not None) or (fight_cls_conf >= 0.50 and scuffle_bbox is not None):
             if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
                 self.fight_cooldown = timestamp
                 calc_conf = min(0.98, max(round(fight_cls_conf, 2), round(0.75 + (self.fight_score / 10.0) * 0.22, 2)))

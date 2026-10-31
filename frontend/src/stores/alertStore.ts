@@ -4,6 +4,7 @@ import { audioAlert } from '../utils/audioAlert';
 export interface LiveAlert {
   id: number;
   job_id: number;
+  source_id?: number;
   type: string;
   confidence: number;
   source_name: string;
@@ -13,6 +14,7 @@ export interface LiveAlert {
 
 export interface JobProgress {
   job_id: number;
+  source_id?: number;
   progress_pct: number;
   processed_fps?: number;
   status: string;
@@ -78,7 +80,11 @@ export const useAlertStore = create<AlertStoreState>((set, get) => ({
           } else if (payload.event === 'job.progress') {
             const data: JobProgress = payload.data;
             set((state) => ({
-              activeJobs: { ...state.activeJobs, [data.job_id]: data },
+              activeJobs: {
+                ...state.activeJobs,
+                [data.job_id]: data,
+                ...(data.source_id ? { [data.source_id]: data } : {})
+              },
             }));
           }
         } catch (e) {

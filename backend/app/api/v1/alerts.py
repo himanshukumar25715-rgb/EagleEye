@@ -29,10 +29,12 @@ def get_alerts(
         query = query.filter(Alert.type == type)
     if status:
         query = query.filter(Alert.status == status)
-    if source_id:
+    if source_id and job_id:
+        query = query.filter((Alert.job_id == job_id) | (Job.source_id == source_id))
+    elif source_id:
         query = query.filter(Job.source_id == source_id)
-    if job_id:
-        query = query.filter(Alert.job_id == job_id)
+    elif job_id:
+        query = query.filter((Alert.job_id == job_id) | (Job.source_id == job_id))
     if min_confidence:
         query = query.filter(Alert.confidence >= min_confidence)
     
@@ -43,6 +45,7 @@ def get_alerts(
     for a in alerts:
         resp = AlertResponse.from_orm(a)
         if a.job and a.job.source:
+            resp.source_id = a.job.source.id
             resp.source_name = a.job.source.name
             resp.location_label = a.job.source.location_label
         result.append(resp)
@@ -60,6 +63,7 @@ def get_alert_detail(
     
     resp = AlertResponse.from_orm(alert)
     if alert.job and alert.job.source:
+        resp.source_id = alert.job.source.id
         resp.source_name = alert.job.source.name
         resp.location_label = alert.job.source.location_label
     return resp
@@ -104,6 +108,7 @@ async def review_alert(
 
     resp = AlertResponse.from_orm(alert)
     if alert.job and alert.job.source:
+        resp.source_id = alert.job.source.id
         resp.source_name = alert.job.source.name
         resp.location_label = alert.job.source.location_label
     return resp

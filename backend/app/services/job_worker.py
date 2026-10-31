@@ -24,7 +24,7 @@ def get_live_frame_generator(job_id: int) -> Generator[bytes, None, None]:
     """Generates MJPEG boundary frames for the web viewer in real-time"""
     placeholder = None
     while True:
-        frame_bytes = latest_job_frames.get(job_id)
+        frame_bytes = latest_job_frames.get(job_id) or latest_job_frames.get(f"src_{job_id}")
         if frame_bytes:
             yield (b"--frame\r\n"
                    b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
@@ -78,6 +78,7 @@ def _run_job_thread(job_id: int):
             "event": "job.progress",
             "data": {
                 "job_id": job_id,
+                "source_id": job.source_id,
                 "progress_pct": 0.0,
                 "status": "processing",
                 "source_name": job.source.name,
@@ -207,6 +208,7 @@ def _run_job_thread(job_id: int):
                         "data": {
                             "id": new_alert.id,
                             "job_id": job_id,
+                            "source_id": job.source_id,
                             "type": new_alert.type,
                             "confidence": new_alert.confidence,
                             "source_name": job.source.name,
@@ -231,6 +233,8 @@ def _run_job_thread(job_id: int):
             # Store latest frame buffer for live MJPEG streaming
             _, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             latest_job_frames[job_id] = buffer.tobytes()
+            if job.source_id:
+                latest_job_frames[f"src_{job.source_id}"] = buffer.tobytes()
 
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
@@ -255,6 +259,7 @@ def _run_job_thread(job_id: int):
                     "event": "job.progress",
                     "data": {
                         "job_id": job_id,
+                        "source_id": job.source_id,
                         "progress_pct": job.progress_pct,
                         "processed_fps": job.processed_fps,
                         "timestamp_sec": round(current_timestamp, 1),

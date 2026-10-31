@@ -19,8 +19,9 @@ export const VideoViewer: React.FC = () => {
   const knownAlertIdsRef = React.useRef<Set<number>>(new Set());
   const [streamError, setStreamError] = useState(false);
 
-  const currentJobId = Number(id) || 1;
-  const liveProgress = activeJobs[currentJobId];
+  const targetId = Number(id) || 1;
+  const currentJobId = job?.id || targetId;
+  const liveProgress = (job?.id && activeJobs[job.id]) || activeJobs[targetId] || activeJobs[currentJobId];
 
   useEffect(() => {
     setStreamError(false);
@@ -32,7 +33,7 @@ export const VideoViewer: React.FC = () => {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, targetId]);
 
   async function loadAllSources() {
     try {
@@ -45,9 +46,16 @@ export const VideoViewer: React.FC = () => {
 
   async function fetchJobAndAlerts() {
     try {
-      const jobData = await apiRequest<any>(`/jobs/${currentJobId}`);
+      const jobData = await apiRequest<any>(`/jobs/${targetId}`);
       setJob(jobData);
-      const alertsData = await apiRequest<any[]>(`/alerts?job_id=${currentJobId}`);
+      const actualJobId = jobData?.id || targetId;
+      const actualSourceId = jobData?.source_id;
+
+      // Query alerts for this feed using both job and source context
+      const queryParams = new URLSearchParams();
+      if (actualJobId) queryParams.append('job_id', String(actualJobId));
+      if (actualSourceId) queryParams.append('source_id', String(actualSourceId));
+      const alertsData = await apiRequest<any[]>(`/alerts?${queryParams.toString()}`);
       
       // Play audible security alarm when a new incident is detected
       if (alertsData && alertsData.length > 0) {
@@ -63,11 +71,11 @@ export const VideoViewer: React.FC = () => {
         }
       }
 
-      setAlerts(alertsData);
+      setAlerts(alertsData || []);
     } catch {
-      setJob({
-        id: currentJobId,
-        source_name: `CCTV surveillance feed #${currentJobId}`,
+      setJob((prev: any) => prev || {
+        id: targetId,
+        source_name: `CCTV surveillance feed #${targetId}`,
         source_location: 'Campus Security Perimeter',
         status: 'processing',
         progress_pct: 0.0,
@@ -79,7 +87,8 @@ export const VideoViewer: React.FC = () => {
   const handleStartAnalysis = async () => {
     setIsStarting(true);
     try {
-      await apiRequest(`/jobs/${currentJobId}/start`, { method: 'POST' });
+      const activeId = job?.id || targetId;
+      await apiRequest(`/jobs/${activeId}/start`, { method: 'POST' });
       setJob((prev: any) => ({ ...prev, status: 'processing', progress_pct: 0.0 }));
     } catch (e: any) {
       alert(`Error starting analysis: ${e.message}`);
@@ -90,7 +99,8 @@ export const VideoViewer: React.FC = () => {
 
   const handleStopAnalysis = async () => {
     try {
-      await apiRequest(`/jobs/${currentJobId}/cancel`, { method: 'POST' });
+      const activeId = job?.id || targetId;
+      await apiRequest(`/jobs/${activeId}/cancel`, { method: 'POST' });
       setJob((prev: any) => ({ ...prev, status: 'cancelled' }));
     } catch (e) {
       console.error(e);
@@ -102,12 +112,19 @@ export const VideoViewer: React.FC = () => {
     const map = new Map<number, any>();
     alerts.forEach((a) => map.set(a.id, a));
     liveAlerts.forEach((la) => {
-      if (la.job_id === currentJobId || (job?.source_id && (la as any).source_id === job.source_id)) {
+      const actualJobId = job?.id || targetId;
+      const actualSourceId = job?.source_id;
+      if (
+        la.job_id === actualJobId ||
+        la.job_id === targetId ||
+        (actualSourceId && (la as any).source_id === actualSourceId) ||
+        (la as any).source_id === targetId
+      ) {
         map.set(la.id, { ...map.get(la.id), ...la });
       }
     });
     return Array.from(map.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
-  }, [alerts, liveAlerts, currentJobId, job?.source_id]);
+  }, [alerts, liveAlerts, targetId, job?.id, job?.source_id]);
 
   const currentStatus = liveProgress?.status || job?.status || 'processing';
   const currentProgress = liveProgress?.progress_pct ?? job?.progress_pct ?? 0.0;
@@ -143,7 +160,7 @@ export const VideoViewer: React.FC = () => {
         <div className="flex items-center gap-4">
           {allSources.length > 1 && (
             <select
-              value={currentJobId}
+              value={job?.source_id || targetId}
               onChange={(e) => navigate(`/jobs/${e.target.value}`)}
               className="px-3 py-1.5 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs text-brand-white focus:outline-none focus:border-brand-accent font-semibold"
             >
