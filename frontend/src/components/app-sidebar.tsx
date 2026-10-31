@@ -10,6 +10,10 @@ import {
   Settings,
   ShieldCheck,
   LogOut,
+  Building,
+  Award,
+  Radio,
+  UserCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,6 +53,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     { to: "/alerts", label: "Alert queue", icon: Bell },
     { to: "/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/reports", label: "Reports", icon: FileText },
+  ];
+
+  const navPortals = [
+    { to: "/college-admin", label: "College Admin", icon: Building, allowedRoles: ["admin", "owner"] },
+    { to: "/owner", label: "Owner Portal", icon: Award, allowedRoles: ["owner", "admin"] },
+    { to: "/security-room-1", label: "Security Room 1", icon: Radio, allowedRoles: ["security_room", "operator", "admin", "owner"] },
   ];
 
   const navAdmin = [
@@ -132,6 +142,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         tooltip={item.label}
                       >
                         <Icon className="h-4 w-4 shrink-0 transition-transform duration-300" />
+                        <span
+                          className={cn(
+                            "truncate transition-all duration-300 ease-in-out whitespace-nowrap",
+                            isExpanded
+                              ? "opacity-100 max-w-[180px]"
+                              : "opacity-0 max-w-0 pointer-events-none"
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </SidebarMenuButton>
+                    </NavLink>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Clearance Portals Navigation Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Institutional Portals</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navPortals.map((item) => {
+                const isAllowed = !user?.role || item.allowedRoles.includes(user.role);
+                if (!isAllowed) return null;
+                const isActive = location.pathname.startsWith(item.to);
+                const Icon = item.icon;
+
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <NavLink to={item.to} className="block w-full">
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.label}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 text-brand-accent" />
                         <span
                           className={cn(
                             "truncate transition-all duration-300 ease-in-out whitespace-nowrap",
