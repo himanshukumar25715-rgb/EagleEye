@@ -122,14 +122,30 @@ def _run_job_thread(job_id: int):
             cap = cv2.VideoCapture(video_path)
 
         if not cap.isOpened():
-            job.status = JobStatus.FAILED.value
-            job.error = f"Could not open video/stream: {video_path}"
-            db.commit()
-            ws_manager.broadcast_sync({
-                "event": "job.failed",
-                "data": {"job_id": job_id, "error": job.error}
-            })
-            return
+            if is_live:
+                # Live stream auto-reconnect: keep retrying in background
+                retry_count = 0
+                while not cap.isOpened() and not active_cancel_flags.get(job_id, False) and retry_count < 60:
+                    time.sleep(1.0)
+                    retry_count += 1
+                    if is_device_idx:
+                        cap = cv2.VideoCapture(int(video_path))
+                    else:
+                        cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+                if not cap.isOpened():
+                    job.status = JobStatus.FAILED.value
+                    job.error = f"Could not connect to live feed: {video_path}"
+                    db.commit()
+                    return
+            else:
+                job.status = JobStatus.FAILED.value
+                job.error = f"Could not open video/stream: {video_path}"
+                db.commit()
+                ws_manager.broadcast_sync({
+                    "event": "job.failed",
+                    "data": {"job_id": job_id, "error": job.error}
+                })
+                return
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if total_frames <= 0:
