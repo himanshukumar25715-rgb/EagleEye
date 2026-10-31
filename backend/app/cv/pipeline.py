@@ -72,6 +72,18 @@ class YOLO11SurveillancePipeline:
             except Exception as e:
                 print(f"[EagleEye CV] Note: fight classifier deferred: {e}")
 
+        # Check for dedicated weapon detection model (Knife, firearms, blades)
+        weapon_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_weapon_best.pt")
+        if not os.path.exists(weapon_weights):
+            weapon_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "best.pt")
+        self.weapon_model = None
+        if os.path.exists(weapon_weights):
+            try:
+                self.weapon_model = YOLO(weapon_weights)
+                print(f"[EagleEye CV] Dedicated Local Weapon Model loaded from {weapon_weights}")
+            except Exception as e:
+                print(f"[EagleEye CV] Note: weapon model deferred: {e}")
+
         print(f"[EagleEye YOLO11] Person classes: {self.person_class_ids}, Bag classes: {self.bag_class_ids}, Weapon classes: {self.weapon_class_ids}")
 
         # Module 1: Weapon multi-frame state: track_id -> list of bools (last 5 processed frames)
@@ -156,8 +168,33 @@ class YOLO11SurveillancePipeline:
                 elif cls_id in self.weapon_class_ids:
                     detected_weapons.append(item_info)
 
-        # Query Roboflow Serverless Workflow (CCTV Gun & Knife) only if configured
-        if detected_persons and settings.USE_ROBOFLOW_WEAPON_API and settings.ROBOFLOW_API_KEY:
+        # Local Weapon Model Inference (Runs high-speed offline verification)
+        if self.weapon_model and frame_idx % max(1, int(fps // 5)) == 0:
+            try:
+                w_conf_thresh = getattr(settings, 'WEAPON_CONFIDENCE_THRESHOLD', 0.25) or 0.25
+                w_results = self.weapon_model.predict(
+                    source=frame,
+                    conf=w_conf_thresh,
+                    imgsz=640,
+                    verbose=False
+                )
+                if w_results and len(w_results) > 0 and w_results[0].boxes is not None:
+                    for w_box in w_results[0].boxes:
+                        w_cls_id = int(w_box.cls[0].item())
+                        w_conf = float(w_box.conf[0].item())
+                        w_label = w_results[0].names.get(w_cls_id, "weapon")
+                        wx1, wy1, wx2, wy2 = map(int, w_box.xyxy[0].tolist())
+                        detected_weapons.append({
+                            "track_id": f"wpn_{w_label}_{wx1}_{wy1}",
+                            "conf": w_conf,
+                            "bbox": [wx1, wy1, wx2, wy2],
+                            "centroid": (int((wx1 + wx2) / 2), int((wy1 + wy2) / 2)),
+                            "label": w_label
+                        })
+            except Exception as w_err:
+                pass
+        elif detected_persons and settings.USE_ROBOFLOW_WEAPON_API and settings.ROBOFLOW_API_KEY:
+            # Fallback to Roboflow API if local model is absent
             if frame_idx % max(1, int(fps // 2)) == 0:
                 rf_weapons = self.roboflow_client.detect_weapons(frame, confidence_thresh=settings.WEAPON_CONFIDENCE_THRESHOLD)
                 for rf_w in rf_weapons:
@@ -195,7 +232,7 @@ class YOLO11SurveillancePipeline:
                             "confidence": round(conf, 2),
                             "track_id": track_id,
                             "bbox": w_item["bbox"],
-                            "description": f"CCTV Weapon Alert: {w_item.get('label', 'weapon').upper()} detected"
+                            "description": f"CCTV Weapon Threat: {w_item.get('label', 'weapon').upper()} detected ({int(conf * 100)}%)"
                         })
 
         # Clean history for lost tracks
@@ -425,7 +462,7 @@ class YOLO11SurveillancePipeline:
             cv2.rectangle(annotated, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 3)
             cv2.putText(
                 annotated,
-                f"! WEAPON TRK #{wp['track_id']} !",
+                f"! WEAPON: {wp.get('label', 'THREAT').upper()} ({int(wp['conf']*100)}%) !",
                 (b[0], max(20, b[1] - 8)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.55,
