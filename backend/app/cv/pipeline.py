@@ -39,10 +39,52 @@ class YOLO11SurveillancePipeline:
             else:
                 weights_path = "yolo11n.pt"
 
-        print(f"[EagleEye YOLO11] Initializing neural network from {weights_path}...")
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.model = YOLO(weights_path).to(self.device)
-        print(f"[EagleEye YOLO11] Acceleration device active: {self.device.upper()} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
+        # Hardware Acceleration: Intel NPU / Intel Arc GPU via OpenVINO, or CUDA
+        self.device = "cpu"
+        self.is_openvino = False
+        self.active_accel_name = "Intel Core Ultra CPU"
+        self.active_accel_tag = "CPU"
+
+        try:
+            import openvino as ov
+            core = ov.Core()
+            available = core.available_devices
+
+            # Probe 1: Intel AI Boost NPU
+            if "NPU" in available:
+                try:
+                    test_xml = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11n_openvino_model", "yolo11n.xml")
+                    if os.path.exists(test_xml):
+                        m = core.read_model(test_xml)
+                        core.compile_model(m, "NPU")
+                        self.device = "intel:npu"
+                        self.is_openvino = True
+                        self.active_accel_name = f"Intel AI Boost NPU ({core.get_property('NPU', 'FULL_DEVICE_NAME')})"
+                        self.active_accel_tag = "Intel NPU"
+                except Exception:
+                    pass
+
+            # Probe 2: Intel Arc GPU (Xe Matrix Hardware Acceleration)
+            if not self.is_openvino and "GPU" in available:
+                self.device = "intel:gpu"
+                self.is_openvino = True
+                self.active_accel_name = f"Intel Arc GPU Accelerator ({core.get_property('GPU', 'FULL_DEVICE_NAME')})"
+                self.active_accel_tag = "Intel Arc GPU"
+        except Exception:
+            pass
+
+        if not self.is_openvino:
+            if torch.cuda.is_available():
+                self.device = "cuda:0"
+                self.active_accel_name = f"NVIDIA CUDA ({torch.cuda.get_device_name(0)})"
+                self.active_accel_tag = "CUDA"
+
+        print(f"[EagleEye Hardware Acceleration] Active: {self.active_accel_name} ({self.device})")
+
+        ov_main = weights_path.replace(".pt", "_openvino_model")
+        load_main = ov_main if (self.is_openvino and os.path.exists(ov_main)) else weights_path
+        print(f"[EagleEye YOLO11] Initializing neural network from {load_main}...")
+        self.model = YOLO(load_main)
         self.roboflow_client = RoboflowWeaponClient()
 
         # Dynamically map class indices according to model taxonomy (works with COCO or ABODA)
@@ -71,17 +113,23 @@ class YOLO11SurveillancePipeline:
         self.fight_classifier = None
         if active_fight_weights:
             try:
-                self.fight_classifier = YOLO(active_fight_weights).to(self.device)
-                print(f"[EagleEye CV] Neural Violence Detection Network active from {active_fight_weights}")
+                ov_fight = active_fight_weights.replace(".pt", "_openvino_model")
+                load_fight = ov_fight if (self.is_openvino and os.path.exists(ov_fight)) else active_fight_weights
+                self.fight_classifier = YOLO(load_fight, task="classify")
+                print(f"[EagleEye CV] Neural Violence Detection Network active from {load_fight}")
             except Exception as e:
                 print(f"[EagleEye CV] Note: fight classifier deferred: {e}")
 
         # Dedicated Custom Fine-Tuned Weapon & Firearm Model (Pistols, Handguns, Knives)
-        weapon_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "weapon_yolov8n.pt")
+        weapon_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_weapon_best.pt")
+        if not os.path.exists(weapon_weights):
+            weapon_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "weapon_yolov8n.pt")
         self.weapon_model = None
         if os.path.exists(weapon_weights):
             try:
-                self.weapon_model = YOLO(weapon_weights).to(self.device)
+                ov_weapon = weapon_weights.replace(".pt", "_openvino_model")
+                load_weapon = ov_weapon if (self.is_openvino and os.path.exists(ov_weapon)) else weapon_weights
+                self.weapon_model = YOLO(load_weapon, task="detect")
                 print(f"[EagleEye CV] Dedicated Weapon/Firearm Neural Network active: {self.weapon_model.names}")
             except Exception as e:
                 print(f"[EagleEye CV] Note: weapon model deferred: {e}")
@@ -149,13 +197,13 @@ class YOLO11SurveillancePipeline:
                 tracker="bytetrack.yaml",
                 verbose=False,
                 conf=0.25,
-                imgsz=480,
+                imgsz=384,
                 device=self.device
             )
             det = results[0]
         except Exception:
             # Fallback to standard detect if tracking fails
-            results = self.model(source=frame, verbose=False, conf=0.25, imgsz=480, device=self.device)
+            results = self.model(source=frame, verbose=False, conf=0.25, imgsz=384, device=self.device)
             det = results[0]
 
         boxes = det.boxes
@@ -194,7 +242,7 @@ class YOLO11SurveillancePipeline:
                 w_results = self.weapon_model.predict(
                     source=frame,
                     conf=0.20,
-                    imgsz=480,
+                    imgsz=384,
                     device=self.device,
                     verbose=False
                 )
@@ -363,7 +411,7 @@ class YOLO11SurveillancePipeline:
                 y2_c = min(h, scuffle_bbox[3] + pad_y)
                 crop = frame[y1_c:y2_c, x1_c:x2_c]
                 if crop.size > 0 and crop.shape[0] > 20 and crop.shape[1] > 20:
-                    cls_res = self.fight_classifier.predict(crop, imgsz=224, verbose=False)
+                    cls_res = self.fight_classifier.predict(crop, imgsz=384, verbose=False, device=self.device)
                     if cls_res and len(cls_res) > 0 and hasattr(cls_res[0], 'probs') and cls_res[0].probs is not None:
                         probs = cls_res[0].probs
                         fight_idx = None
@@ -589,7 +637,7 @@ class YOLO11SurveillancePipeline:
         cv2.rectangle(annotated, (0, 0), (w, 40), (12, 14, 16), -1)
         cv2.putText(
             annotated,
-            f"EAGLE EYE AI | YOLO11n | Persons: {len(detected_persons)} | Bags: {len(detected_bags)} | Alerts: {len(candidate_alerts)}",
+            f"EAGLE EYE AI | YOLO11 [{self.active_accel_tag}] | Persons: {len(detected_persons)} | Bags: {len(detected_bags)} | Alerts: {len(candidate_alerts)}",
             (14, 25),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.50,
