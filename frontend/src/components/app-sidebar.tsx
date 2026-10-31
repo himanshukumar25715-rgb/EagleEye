@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "./ui/sidebar";
 import { cn } from "../lib/utils";
+import { EagleEyeLogo } from "./EagleEyeLogo";
 import { useAuthStore } from "../stores/authStore";
 import { useAlertStore } from "../stores/alertStore";
 
@@ -62,9 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* Header: Logo and Brand */}
       <SidebarHeader>
         <div className="flex items-center gap-3 px-1 py-1 overflow-hidden transition-all duration-300 ease-in-out">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-brand-accent text-white font-semibold text-xs transition-transform duration-300">
-            EE
-          </div>
+          <EagleEyeLogo size={32} />
           <div
             className={cn(
               "flex flex-col truncate transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
