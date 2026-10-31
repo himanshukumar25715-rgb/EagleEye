@@ -17,6 +17,7 @@ import {
   BreadcrumbSeparator,
 } from "./ui/breadcrumb";
 import { useAlertStore } from "../stores/alertStore";
+import { AudioAlertToggle } from "./AudioAlertToggle";
 
 export const Layout: React.FC = () => {
   const { initWebSocket, toasts, removeToast } = useAlertStore();
@@ -90,7 +91,8 @@ export const Layout: React.FC = () => {
             </Breadcrumb>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
+            <AudioAlertToggle />
             <div className="text-xs px-3 py-1.5 rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] bg-brand-card text-brand-textMuted font-semibold">
               Security node:{" "}
               <span className="text-brand-white">Perimeter & corridor hub</span>

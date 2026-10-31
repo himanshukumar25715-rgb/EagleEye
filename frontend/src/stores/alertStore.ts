@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { audioAlert } from '../utils/audioAlert';
 
 export interface LiveAlert {
   id: number;
@@ -58,6 +59,10 @@ export const useAlertStore = create<AlertStoreState>((set, get) => ({
           if (payload.event === 'alert.created') {
             const newAlert: LiveAlert = payload.data;
             const toastId = Math.random().toString();
+            
+            // Audible threat warning siren
+            audioAlert.playAlertSound(newAlert.type);
+
             set((state) => ({
               liveAlerts: [newAlert, ...state.liveAlerts].slice(0, 50),
               toasts: [

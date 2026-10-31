@@ -1,12 +1,15 @@
 import json
-from typing import List
+import asyncio
+from typing import List, Optional
 from fastapi import WebSocket
 
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
+        self.main_loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def connect(self, websocket: WebSocket):
+        self.main_loop = asyncio.get_running_loop()
         await websocket.accept()
         self.active_connections.append(websocket)
 
@@ -22,5 +25,14 @@ class ConnectionManager:
             except Exception:
                 self.disconnect(connection)
 
-ws_manager = ConnectionManager()
+    def broadcast_sync(self, message: dict):
+        """Thread-safe synchronous broadcast callable from background worker threads"""
+        if self.main_loop and self.main_loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.broadcast(message), self.main_loop)
+        else:
+            try:
+                asyncio.run(self.broadcast(message))
+            except Exception:
+                pass
 
+ws_manager = ConnectionManager()

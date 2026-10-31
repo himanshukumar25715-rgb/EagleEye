@@ -16,6 +16,7 @@ def get_alerts(
     type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     source_id: Optional[int] = Query(None),
+    job_id: Optional[int] = Query(None),
     min_confidence: Optional[float] = Query(None),
     limit: int = Query(50, le=100),
     offset: int = Query(0, ge=0),
@@ -30,6 +31,8 @@ def get_alerts(
         query = query.filter(Alert.status == status)
     if source_id:
         query = query.filter(Job.source_id == source_id)
+    if job_id:
+        query = query.filter(Alert.job_id == job_id)
     if min_confidence:
         query = query.filter(Alert.confidence >= min_confidence)
     

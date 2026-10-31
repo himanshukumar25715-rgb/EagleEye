@@ -74,7 +74,7 @@ def _run_job_thread(job_id: int):
         db.commit()
 
         # Send initial WS event
-        asyncio.run(ws_manager.broadcast({
+        ws_manager.broadcast_sync({
             "event": "job.progress",
             "data": {
                 "job_id": job_id,
@@ -83,7 +83,7 @@ def _run_job_thread(job_id: int):
                 "source_name": job.source.name,
                 "location_label": job.source.location_label
             }
-        }))
+        })
 
         video_path = job.source.path_or_uri
         is_stream_url = video_path.startswith(('http://', 'https://', 'rtsp://', 'rtmp://'))
@@ -92,6 +92,23 @@ def _run_job_thread(job_id: int):
         if is_device_idx:
             cap = cv2.VideoCapture(int(video_path))
         elif is_stream_url:
+            cap = cv2.VideoCapture(video_path)
+        else:
+            if not os.path.exists(video_path):
+                candidate_paths = [
+                    os.path.join(os.path.dirname(__file__), "..", "..", "..", video_path.lstrip("./\\")),
+                    os.path.join(os.path.dirname(__file__), "..", "..", video_path.lstrip("./\\")),
+                    os.path.join("backend", video_path.lstrip("./\\")),
+                    os.path.join(settings.STORAGE_DIR, os.path.basename(video_path)),
+                    os.path.join(settings.UPLOAD_DIR, os.path.basename(video_path)),
+                    os.path.join(os.path.dirname(__file__), "..", "..", "storage", "uploads", os.path.basename(video_path)),
+                    os.path.join("storage", "uploads", os.path.basename(video_path)),
+                    os.path.join("backend", "storage", "uploads", os.path.basename(video_path))
+                ]
+                for cp in candidate_paths:
+                    if os.path.exists(cp):
+                        video_path = os.path.abspath(cp)
+                        break
             cap = cv2.VideoCapture(video_path)
         else:
             if not os.path.isabs(video_path) and not os.path.exists(video_path):
@@ -109,10 +126,10 @@ def _run_job_thread(job_id: int):
             job.status = JobStatus.FAILED.value
             job.error = f"Could not decode video file: {video_path}"
             db.commit()
-            asyncio.run(ws_manager.broadcast({
+            ws_manager.broadcast_sync({
                 "event": "job.failed",
                 "data": {"job_id": job_id, "error": job.error}
-            }))
+            })
             return
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -225,6 +242,61 @@ def _run_job_thread(job_id: int):
             _, buffer = cv2.imencode(".jpg", annotated_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             latest_job_frames[job_id] = buffer.tobytes()
 
+            # Record alerts & generate evidence snapshots
+            for alert_data in candidates:
+                total_alerts_count += 1
+                evidence_filename = f"ev_{job_id}_{frame_idx}_{uuid.uuid4().hex[:8]}.jpg"
+                evidence_path = os.path.join(settings.EVIDENCE_DIR, evidence_filename)
+                cv2.imwrite(evidence_path, annotated_frame)
+                sha256_hash = calculate_sha256(evidence_path)
+
+                new_alert = Alert(
+                    job_id=job_id,
+                    type=alert_data["type"],
+                    confidence=alert_data["confidence"],
+                    status=AlertStatus.NEW.value,
+                    frame_start=frame_idx,
+                    frame_end=frame_idx,
+                    ts_start=current_timestamp,
+                    ts_end=current_timestamp,
+                    track_ids=str(alert_data.get("track_id", ""))
+                )
+                db.add(new_alert)
+                db.commit()
+                db.refresh(new_alert)
+
+                evidence = Evidence(
+                    alert_id=new_alert.id,
+                    kind="frame",
+                    path=evidence_path,
+                    bbox_json=json.dumps(alert_data.get("bbox", [])),
+                    sha256=sha256_hash
+                )
+                db.add(evidence)
+                db.commit()
+
+                # Broadcast instant alert notification over WebSocket
+                ws_manager.broadcast_sync({
+                    "event": "alert.created",
+                    "data": {
+                        "id": new_alert.id,
+                        "job_id": job_id,
+                        "type": new_alert.type,
+                        "confidence": new_alert.confidence,
+                        "source_name": job.source.name,
+                        "location_label": job.source.location_label,
+                        "created_at": new_alert.created_at.isoformat(),
+                        "ts_start": round(current_timestamp, 1)
+                    }
+                })
+
+                # Play non-blocking OS audio alert sound upon incident transmission
+                try:
+                    import winsound
+                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                except Exception:
+                    pass
+
             # Compute progress & FPS
             progress_pct = min(100.0, (frame_idx / total_frames) * 100.0)
             elapsed = max(0.001, time.time() - start_time)
@@ -244,7 +316,7 @@ def _run_job_thread(job_id: int):
                 job.processed_fps = round(target_fps, 1)
                 db.commit()
 
-                asyncio.run(ws_manager.broadcast({
+                ws_manager.broadcast_sync({
                     "event": "job.progress",
                     "data": {
                         "job_id": job_id,
@@ -254,7 +326,7 @@ def _run_job_thread(job_id: int):
                         "status": "processing",
                         "alerts_count": total_alerts_count
                     }
-                }))
+                })
 
             # Dynamic pacing: sleep remaining frame interval for silky-smooth 20 FPS
             loop_elapsed = time.time() - loop_start
@@ -270,10 +342,10 @@ def _run_job_thread(job_id: int):
             job.finished_at = datetime.utcnow()
             db.commit()
 
-            asyncio.run(ws_manager.broadcast({
+            ws_manager.broadcast_sync({
                 "event": "job.completed",
                 "data": {"job_id": job_id, "status": "completed"}
-            }))
+            })
 
     except Exception as e:
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -281,10 +353,10 @@ def _run_job_thread(job_id: int):
             job.status = JobStatus.FAILED.value
             job.error = str(e)
             db.commit()
-            asyncio.run(ws_manager.broadcast({
+            ws_manager.broadcast_sync({
                 "event": "job.failed",
                 "data": {"job_id": job_id, "error": str(e)}
-            }))
+            })
     finally:
         active_cancel_flags.pop(job_id, None)
         active_threads.pop(job_id, None)

@@ -31,11 +31,48 @@ class YOLO11SurveillancePipeline:
     def __init__(self, weights_path: Optional[str] = None):
         if weights_path is None:
             default_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11n.pt")
-            weights_path = default_weights if os.path.exists(default_weights) else "yolo11n.pt"
+            custom_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_aboda_best.pt")
+            if os.path.exists(default_weights):
+                weights_path = default_weights
+            elif os.path.exists(custom_weights):
+                weights_path = custom_weights
+            else:
+                weights_path = "yolo11n.pt"
 
         print(f"[EagleEye YOLO11] Initializing neural network from {weights_path}...")
         self.model = YOLO(weights_path)
         self.roboflow_client = RoboflowWeaponClient()
+
+        # Dynamically map class indices according to model taxonomy (works with COCO or ABODA)
+        self.person_class_ids = set()
+        self.bag_class_ids = set()
+        self.weapon_class_ids = set()
+        for cid, cname in self.model.names.items():
+            cn = str(cname).lower()
+            if "person" in cn or "pedestrian" in cn:
+                self.person_class_ids.add(cid)
+            elif any(b in cn for b in ["bag", "backpack", "suitcase", "carrybag", "handbag", "luggage"]):
+                self.bag_class_ids.add(cid)
+            elif any(w in cn for w in ["knife", "gun", "weapon", "pistol", "scissors", "bat", "rifle", "sword"]):
+                self.weapon_class_ids.add(cid)
+
+        # Fallback to defaults if empty
+        if not self.person_class_ids:
+            self.person_class_ids = {0}
+        if not self.bag_class_ids:
+            self.bag_class_ids = {24, 26, 28}
+
+        # Check for fine-tuned deep learning fight classifier
+        fight_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_fight_best.pt")
+        self.fight_classifier = None
+        if os.path.exists(fight_weights):
+            try:
+                self.fight_classifier = YOLO(fight_weights)
+                print(f"[EagleEye CV] Deep Learning Fight Classifier loaded from {fight_weights}")
+            except Exception as e:
+                print(f"[EagleEye CV] Note: fight classifier deferred: {e}")
+
+        print(f"[EagleEye YOLO11] Person classes: {self.person_class_ids}, Bag classes: {self.bag_class_ids}, Weapon classes: {self.weapon_class_ids}")
 
         # Module 1: Weapon multi-frame state: track_id -> list of bools (last 5 processed frames)
         self.weapon_history: Dict[str, List[bool]] = {}
@@ -46,6 +83,7 @@ class YOLO11SurveillancePipeline:
         self.person_positions: Dict[str, Tuple[float, float, float]] = {}
         self.fight_candidate_start: Optional[float] = None
         self.fight_cooldown: float = 0.0
+        self.fight_score: float = 0.0
 
         # Module 3: Unattended Bag state:
         # bag_id -> {"first_seen": ts, "stationary_since": ts, "last_x": x, "last_y": y}
@@ -79,13 +117,13 @@ class YOLO11SurveillancePipeline:
                 persist=True,
                 tracker="bytetrack.yaml",
                 verbose=False,
-                conf=0.25,
-                imgsz=384
+                conf=0.20,
+                imgsz=640
             )
             det = results[0]
         except Exception:
             # Fallback to standard detect if tracking fails
-            results = self.model(source=frame, verbose=False, conf=0.25, imgsz=384)
+            results = self.model(source=frame, verbose=False, conf=0.20, imgsz=640)
             det = results[0]
 
         boxes = det.boxes
@@ -111,11 +149,11 @@ class YOLO11SurveillancePipeline:
                     "centroid": (cx, cy)
                 }
 
-                if cls_id == PERSON_CLASS_ID:
+                if cls_id in self.person_class_ids:
                     detected_persons.append(item_info)
-                elif cls_id in BAG_CLASS_IDS:
+                elif cls_id in self.bag_class_ids:
                     detected_bags.append(item_info)
-                elif cls_id in WEAPON_CLASS_IDS:
+                elif cls_id in self.weapon_class_ids:
                     detected_weapons.append(item_info)
 
         # Query Roboflow Serverless Workflow (CCTV Gun & Knife) only if configured
@@ -174,7 +212,7 @@ class YOLO11SurveillancePipeline:
         scuffle_bbox = None
 
         if len(detected_persons) >= 2:
-            # Check pairwise distance and rapid velocity change
+            # Pairwise proximity, bounding-box collision & physical entanglement
             for i in range(len(detected_persons)):
                 for j in range(i + 1, len(detected_persons)):
                     p1 = detected_persons[i]
@@ -184,42 +222,80 @@ class YOLO11SurveillancePipeline:
                     dy = p1["centroid"][1] - p2["centroid"][1]
                     dist = np.sqrt(dx * dx + dy * dy)
 
-                    # Interpersonal distance < 120 px indicates physical entanglement/scuffle
-                    if dist < 120:
-                        prev1 = self.person_positions.get(p1["track_id"])
-                        if prev1:
-                            px1, py1, prev_t = prev1
-                            dt = max(0.001, timestamp - prev_t)
-                            speed1 = np.sqrt((p1["centroid"][0] - px1)**2 + (p1["centroid"][1] - py1)**2) / dt
-                            
-                            # High velocity / abrupt jerk interaction
-                            if speed1 > 280:
-                                high_motion_detected = True
-                                scuffle_bbox = [
-                                    min(p1["bbox"][0], p2["bbox"][0]),
-                                    min(p1["bbox"][1], p2["bbox"][1]),
-                                    max(p1["bbox"][2], p2["bbox"][2]),
-                                    max(p1["bbox"][3], p2["bbox"][3]),
-                                ]
-                                break
+                    # Dynamic scaling based on person dimensions (works in 360p, 720p, 1080p, 4K)
+                    p1_w = max(10, p1["bbox"][2] - p1["bbox"][0])
+                    p1_h = max(10, p1["bbox"][3] - p1["bbox"][1])
+                    p2_w = max(10, p2["bbox"][2] - p2["bbox"][0])
+                    p2_h = max(10, p2["bbox"][3] - p2["bbox"][1])
+                    max_prox = max(p1_w, p2_w) * 1.6
+
+                    # Bounding box intersection (direct physical contact/grappling)
+                    x_overlap = max(0, min(p1["bbox"][2], p2["bbox"][2]) - max(p1["bbox"][0], p2["bbox"][0]))
+                    y_overlap = max(0, min(p1["bbox"][3], p2["bbox"][3]) - max(p1["bbox"][1], p2["bbox"][1]))
+                    overlap_area = x_overlap * y_overlap
+
+                    # Fall down indicator (person knocked over onto ground: width > 0.85 * height)
+                    is_fallen = (p1_w > p1_h * 0.85) or (p2_w > p2_h * 0.85)
+
+                    if dist < max_prox or overlap_area > 0 or is_fallen:
+                        high_motion_detected = True
+                        scuffle_bbox = [
+                            min(p1["bbox"][0], p2["bbox"][0]),
+                            min(p1["bbox"][1], p2["bbox"][1]),
+                            max(p1["bbox"][2], p2["bbox"][2]),
+                            max(p1["bbox"][3], p2["bbox"][3]),
+                        ]
+                        break
                 if high_motion_detected:
                     break
 
+        # Deep learning classification verification if model available
+        fight_cls_conf = 0.0
+        if self.fight_classifier and scuffle_bbox is not None:
+            try:
+                pad_x = int((scuffle_bbox[2] - scuffle_bbox[0]) * 0.1)
+                pad_y = int((scuffle_bbox[3] - scuffle_bbox[1]) * 0.1)
+                x1_c = max(0, scuffle_bbox[0] - pad_x)
+                y1_c = max(0, scuffle_bbox[1] - pad_y)
+                x2_c = min(w, scuffle_bbox[2] + pad_x)
+                y2_c = min(h, scuffle_bbox[3] + pad_y)
+                crop = frame[y1_c:y2_c, x1_c:x2_c]
+                if crop.size > 0 and crop.shape[0] > 20 and crop.shape[1] > 20:
+                    cls_res = self.fight_classifier.predict(crop, imgsz=224, verbose=False)
+                    if cls_res and len(cls_res) > 0 and hasattr(cls_res[0], 'probs') and cls_res[0].probs is not None:
+                        probs = cls_res[0].probs
+                        fight_idx = None
+                        for idx, name in cls_res[0].names.items():
+                            if str(name).lower() == 'fight':
+                                fight_idx = idx
+                                break
+                        if fight_idx is not None:
+                            fight_cls_conf = float(probs.data[fight_idx].item())
+            except Exception:
+                pass
+
+        # Leaky bucket temporal accumulator boosted by deep learning verification
         if high_motion_detected:
-            if self.fight_candidate_start is None:
-                self.fight_candidate_start = timestamp
-            elif (timestamp - self.fight_candidate_start) >= settings.FIGHT_WINDOW_SECONDS:
-                if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
-                    self.fight_cooldown = timestamp
-                    candidate_alerts.append({
-                        "type": "fight",
-                        "confidence": 0.82,
-                        "track_id": "FIGHT_ENGAGE",
-                        "bbox": scuffle_bbox or [0, 0, w, h],
-                        "description": "Physical violence/fight detected via high-motion proximity"
-                    })
+            boost = 1.2
+            if fight_cls_conf > 0.50:
+                boost = 2.0 + (fight_cls_conf - 0.50) * 2.0
+            self.fight_score = min(10.0, self.fight_score + boost)
         else:
-            self.fight_candidate_start = None
+            self.fight_score = max(0.0, self.fight_score - 0.4)
+
+        # Trigger alert when fight energy persists across ~1.0-1.5s window or high-confidence DL detection
+        if self.fight_score >= 3.6 or (fight_cls_conf >= 0.70 and scuffle_bbox is not None):
+            if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
+                self.fight_cooldown = timestamp
+                calc_conf = min(0.98, max(round(fight_cls_conf, 2), round(0.75 + (self.fight_score / 10.0) * 0.22, 2)))
+                desc = f"Physical altercation / violence confirmed (Deep Learning: {int(fight_cls_conf * 100)}%)" if fight_cls_conf > 0.5 else "Physical altercation / violence detected via interpersonal collision & struggle"
+                candidate_alerts.append({
+                    "type": "fight",
+                    "confidence": calc_conf,
+                    "track_id": "FIGHT_ENGAGE",
+                    "bbox": scuffle_bbox or [0, 0, w, h],
+                    "description": desc
+                })
 
         # Update person position cache
         for p in detected_persons:
@@ -359,16 +435,16 @@ class YOLO11SurveillancePipeline:
             )
 
         # Draw Scuffle highlight if active
-        if high_motion and scuffle_bbox:
+        if self.fight_score >= 2.0 and scuffle_bbox:
             sb = scuffle_bbox
-            cv2.rectangle(annotated, (sb[0], sb[1]), (sb[2], sb[3]), (0, 140, 255), 2)
+            cv2.rectangle(annotated, (sb[0], sb[1]), (sb[2], sb[3]), (0, 0, 255), 3)
             cv2.putText(
                 annotated,
-                "WARNING: HIGH MOTION SCUFFLE",
+                f"! WARNING: PHYSICAL FIGHT DETECTED ({int(self.fight_score*10)}%) !",
                 (sb[0], max(25, sb[1] - 8)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (0, 165, 255),
+                0.60,
+                (0, 0, 255),
                 2,
                 cv2.LINE_AA
             )
