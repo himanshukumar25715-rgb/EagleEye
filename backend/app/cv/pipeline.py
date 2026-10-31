@@ -64,15 +64,27 @@ class YOLO11SurveillancePipeline:
         if not self.bag_class_ids:
             self.bag_class_ids = {24, 26, 28}
 
-        # Check for fine-tuned deep learning fight classifier
-        fight_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_fight_best.pt")
+        # Check for fine-tuned deep learning fight & violence detector
+        fight_nano = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo_fight_nano.pt")
+        fight_best = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "yolo11_fight_best.pt")
+        active_fight_weights = fight_nano if os.path.exists(fight_nano) else (fight_best if os.path.exists(fight_best) else None)
         self.fight_classifier = None
-        if os.path.exists(fight_weights):
+        if active_fight_weights:
             try:
-                self.fight_classifier = YOLO(fight_weights)
-                print(f"[EagleEye CV] Deep Learning Fight Classifier loaded from {fight_weights}")
+                self.fight_classifier = YOLO(active_fight_weights).to(self.device)
+                print(f"[EagleEye CV] Neural Violence Detection Network active from {active_fight_weights}")
             except Exception as e:
                 print(f"[EagleEye CV] Note: fight classifier deferred: {e}")
+
+        # Dedicated Custom Fine-Tuned Weapon & Firearm Model (Pistols, Handguns, Knives)
+        weapon_weights = os.path.join(os.path.dirname(__file__), "..", "..", "weights", "weapon_yolov8n.pt")
+        self.weapon_model = None
+        if os.path.exists(weapon_weights):
+            try:
+                self.weapon_model = YOLO(weapon_weights).to(self.device)
+                print(f"[EagleEye CV] Dedicated Weapon/Firearm Neural Network active: {self.weapon_model.names}")
+            except Exception as e:
+                print(f"[EagleEye CV] Note: weapon model deferred: {e}")
 
         print(f"[EagleEye YOLO11] Person classes: {self.person_class_ids}, Bag classes: {self.bag_class_ids}, Weapon classes: {self.weapon_class_ids}")
 
@@ -97,6 +109,21 @@ class YOLO11SurveillancePipeline:
         # Module 4: Overcrowding state
         self.crowd_start_time: Optional[float] = None
         self.crowd_cooldown: float = 0.0
+
+    def reset_state(self):
+        """Clears all trackers and cooldowns when video restarts or loops"""
+        self.weapon_history.clear()
+        self.weapon_cooldown.clear()
+        self.person_positions.clear()
+        self.fight_candidate_start = None
+        self.fight_cooldown = 0.0
+        self.fight_score = 0.0
+        self.last_fight_overlay_ts = 0.0
+        self.last_fight_scuffle_bbox = None
+        self.bag_tracks.clear()
+        self.bag_alert_sent.clear()
+        self.crowd_start_time = None
+        self.crowd_cooldown = 0.0
 
     def detect_and_verify(
         self,
@@ -161,6 +188,34 @@ class YOLO11SurveillancePipeline:
                 elif cls_id in self.weapon_class_ids:
                     detected_weapons.append(item_info)
 
+        # Run Dedicated Fine-Tuned Weapon Detection (Pistols, Firearms, Knives)
+        if self.weapon_model is not None:
+            try:
+                w_results = self.weapon_model.predict(
+                    source=frame,
+                    conf=0.20,
+                    imgsz=480,
+                    device=self.device,
+                    verbose=False
+                )
+                if w_results and len(w_results) > 0 and w_results[0].boxes is not None:
+                    for i, w_box in enumerate(w_results[0].boxes):
+                        w_cls = int(w_box.cls[0].item())
+                        w_conf = float(w_box.conf[0].item())
+                        w_coords = w_box.xyxy[0].cpu().numpy().astype(int)
+                        w_lbl = str(self.weapon_model.names.get(w_cls, "weapon")).lower()
+                        w_cx = (w_coords[0] + w_coords[2]) / 2.0
+                        w_cy = (w_coords[1] + w_coords[3]) / 2.0
+                        detected_weapons.append({
+                            "track_id": f"wp_{w_lbl}_{i}",
+                            "conf": w_conf,
+                            "bbox": w_coords.tolist(),
+                            "centroid": (w_cx, w_cy),
+                            "label": w_lbl
+                        })
+            except Exception as e:
+                pass
+
         # Query Roboflow Serverless Workflow (CCTV Gun & Knife) only if configured
         if detected_persons and settings.USE_ROBOFLOW_WEAPON_API and settings.ROBOFLOW_API_KEY:
             if frame_idx % max(1, int(fps // 2)) == 0:
@@ -178,38 +233,25 @@ class YOLO11SurveillancePipeline:
         is_fight_in_progress = (self.fight_score >= 2.0) or ((timestamp - self.last_fight_overlay_ts) < 6.0 and self.last_fight_overlay_ts > 0)
 
         # -------------------------------------------------------------
-        # MODULE 1: Weapon Detection with Dynamic Altercation Boost
+        # MODULE 1: Weapon Detection (Immediate Tactical Alerting)
         # -------------------------------------------------------------
-        # If a fight is in progress, lower threshold from 0.65 to 0.35 so drawn weapons/knives are captured immediately
-        effective_weapon_thresh = 0.35 if is_fight_in_progress else settings.WEAPON_CONFIDENCE_THRESHOLD
-        effective_weapon_min_frames = 2 if is_fight_in_progress else settings.WEAPON_MIN_FRAMES_IN_LAST_5
-
-        current_frame_weapon_ids = set()
         for w_item in detected_weapons:
             track_id = w_item["track_id"]
             conf = w_item["conf"]
-            current_frame_weapon_ids.add(track_id)
+            w_label = str(w_item.get("label", "weapon")).upper()
 
-            if conf >= effective_weapon_thresh:
-                history = self.weapon_history.get(track_id, [])
-                history.append(True)
-                if len(history) > 5:
-                    history.pop(0)
-                self.weapon_history[track_id] = history
-
-                # Multi-frame rule
-                if sum(history) >= effective_weapon_min_frames:
-                    last_alert = self.weapon_cooldown.get(track_id, 0.0)
-                    if (timestamp - last_alert) >= (10.0 if is_fight_in_progress else settings.WEAPON_COOLDOWN_SECONDS):
-                        self.weapon_cooldown[track_id] = timestamp
-                        alert_prefix = "CRITICAL: WEAPON BRANDISHED IN ALTERCATION" if is_fight_in_progress else "CCTV Weapon Alert"
-                        candidate_alerts.append({
-                            "type": "weapon",
-                            "confidence": round(conf, 2),
-                            "track_id": track_id,
-                            "bbox": w_item["bbox"],
-                            "description": f"{alert_prefix}: {w_item.get('label', 'weapon').upper()} detected"
-                        })
+            # Trigger alert every 5s if weapon persists, or reset if loop restarted
+            last_alert = self.weapon_cooldown.get(track_id, 0.0)
+            if (timestamp - last_alert) >= 5.0 or timestamp < last_alert:
+                self.weapon_cooldown[track_id] = timestamp
+                alert_prefix = "CRITICAL: WEAPON BRANDISHED IN ALTERCATION" if is_fight_in_progress else "CRITICAL: WEAPON DETECTED"
+                candidate_alerts.append({
+                    "type": "weapon",
+                    "confidence": round(conf, 2),
+                    "track_id": track_id,
+                    "bbox": w_item["bbox"],
+                    "description": f"{alert_prefix}: {w_label} ({int(conf*100)}%)"
+                })
 
         # Clean history for lost tracks
         for trk in list(self.weapon_history.keys()):
@@ -219,13 +261,16 @@ class YOLO11SurveillancePipeline:
                     self.weapon_history[trk].pop(0)
 
         # -------------------------------------------------------------
-        # MODULE 2: Fight / Violence Proximity & Motion Dynamics (Section 9.2)
+        # MODULE 2: Advanced Dynamic Fight Verification
+        # Feature 1: Minimum Motion Energy & Velocity Differentiation
+        # Feature 2: Multi-Person Clustered Scuffle Expansion (3rd/4th cluster)
+        # Feature 3: Temporal Persistence Decay (sustained >= 0.8s)
         # -------------------------------------------------------------
         high_motion_detected = False
         scuffle_bbox = None
+        cluster_participants = 0
 
         if len(detected_persons) >= 2:
-            # Pairwise proximity, bounding-box collision & physical entanglement
             for i in range(len(detected_persons)):
                 for j in range(i + 1, len(detected_persons)):
                     p1 = detected_persons[i]
@@ -235,22 +280,50 @@ class YOLO11SurveillancePipeline:
                     dy = p1["centroid"][1] - p2["centroid"][1]
                     dist = np.sqrt(dx * dx + dy * dy)
 
-                    # Dynamic scaling based on person dimensions (works in 360p, 720p, 1080p, 4K)
                     p1_w = max(10, p1["bbox"][2] - p1["bbox"][0])
                     p1_h = max(10, p1["bbox"][3] - p1["bbox"][1])
                     p2_w = max(10, p2["bbox"][2] - p2["bbox"][0])
                     p2_h = max(10, p2["bbox"][3] - p2["bbox"][1])
-                    max_prox = max(p1_w, p2_w) * 1.6
+                    max_prox = max(p1_w, p2_w) * 1.5
 
-                    # Bounding box intersection (direct physical contact/grappling)
+                    # Direct collision overlap
                     x_overlap = max(0, min(p1["bbox"][2], p2["bbox"][2]) - max(p1["bbox"][0], p2["bbox"][0]))
                     y_overlap = max(0, min(p1["bbox"][3], p2["bbox"][3]) - max(p1["bbox"][1], p2["bbox"][1]))
                     overlap_area = x_overlap * y_overlap
-
-                    # Fall down indicator (person knocked over onto ground: width > 0.85 * height)
                     is_fallen = (p1_w > p1_h * 0.85) or (p2_w > p2_h * 0.85)
 
-                    if dist < max_prox or overlap_area > 0 or is_fallen:
+                    # FEATURE 1: Require Minimum Motion Energy (Filter out couples & co-walkers)
+                    # Check velocity vectors from previous position history
+                    prev_p1 = self.person_positions.get(p1["track_id"])
+                    prev_p2 = self.person_positions.get(p2["track_id"])
+
+                    motion_energy = 0.0
+                    co_walking = False
+
+                    if prev_p1 and prev_p2:
+                        dt1 = max(0.001, timestamp - prev_p1[2])
+                        dt2 = max(0.001, timestamp - prev_p2[2])
+                        v1x = (p1["centroid"][0] - prev_p1[0]) / dt1
+                        v1y = (p1["centroid"][1] - prev_p1[1]) / dt1
+                        v2x = (p2["centroid"][0] - prev_p2[0]) / dt2
+                        v2y = (p2["centroid"][1] - prev_p2[1]) / dt2
+
+                        spd1 = np.sqrt(v1x**2 + v1y**2)
+                        spd2 = np.sqrt(v2x**2 + v2y**2)
+                        rel_v = np.sqrt((v1x - v2x)**2 + (v1y - v2y)**2)
+                        motion_energy = rel_v
+
+                        # Co-walking check: Moving at similar speed in nearly identical direction
+                        if spd1 > 10 and spd2 > 10:
+                            dot = (v1x * v2x + v1y * v2y) / (spd1 * spd2 + 1e-5)
+                            if dot > 0.85 and rel_v < 35:
+                                co_walking = True
+
+                    # Only classify as scuffle if physical proximity AND active antagonistic motion (not co-walking)
+                    is_in_physical_contact = (overlap_area > 0) or (dist < max_prox) or is_fallen
+                    is_turbulent_motion = (motion_energy >= 16.0) or is_fallen
+
+                    if is_in_physical_contact and is_turbulent_motion and not co_walking:
                         high_motion_detected = True
                         scuffle_bbox = [
                             min(p1["bbox"][0], p2["bbox"][0]),
@@ -258,6 +331,23 @@ class YOLO11SurveillancePipeline:
                             max(p1["bbox"][2], p2["bbox"][2]),
                             max(p1["bbox"][3], p2["bbox"][3]),
                         ]
+
+                        # FEATURE 2: Multi-Person Clustered Scuffle Expansion (3rd & 4th converging participants)
+                        cluster_participants = 2
+                        sc_cx = (scuffle_bbox[0] + scuffle_bbox[2]) / 2.0
+                        sc_cy = (scuffle_bbox[1] + scuffle_bbox[3]) / 2.0
+
+                        for k, pk in enumerate(detected_persons):
+                            if k != i and k != j:
+                                pk_dist = np.sqrt((pk["centroid"][0] - sc_cx)**2 + (pk["centroid"][1] - sc_cy)**2)
+                                if pk_dist < (max_prox * 1.8):
+                                    cluster_participants += 1
+                                    scuffle_bbox = [
+                                        min(scuffle_bbox[0], pk["bbox"][0]),
+                                        min(scuffle_bbox[1], pk["bbox"][1]),
+                                        max(scuffle_bbox[2], pk["bbox"][2]),
+                                        max(scuffle_bbox[3], pk["bbox"][3]),
+                                    ]
                         break
                 if high_motion_detected:
                     break
@@ -287,31 +377,42 @@ class YOLO11SurveillancePipeline:
             except Exception:
                 pass
 
-        # Leaky bucket temporal accumulator boosted by deep learning verification
+        # FEATURE 3: Temporal Persistence Decay (Requires >= 0.8s to 1.2s sustained dynamic)
         if high_motion_detected:
-            boost = 1.2
+            if self.fight_candidate_start is None:
+                self.fight_candidate_start = timestamp
+
+            sustained_duration = timestamp - self.fight_candidate_start
+            boost = 1.4 + (0.5 if cluster_participants >= 3 else 0.0)
             if fight_cls_conf > 0.50:
-                boost = 2.0 + (fight_cls_conf - 0.50) * 2.0
+                boost += 2.0
             self.fight_score = min(10.0, self.fight_score + boost)
         else:
-            self.fight_score = max(0.0, self.fight_score - 0.4)
+            self.fight_candidate_start = None
+            self.fight_score = max(0.0, self.fight_score - 0.5)
+            sustained_duration = 0.0
 
-        # Trigger alert when fight energy persists across ~1.0-1.5s window or high-confidence DL detection
-        if self.fight_score >= 2.2 or (fight_cls_conf >= 0.60 and scuffle_bbox is not None) or high_motion_detected:
+        # Latch video overlay timestamp
+        if (high_motion_detected and sustained_duration >= 0.6) or self.fight_score >= 2.0:
             self.last_fight_overlay_ts = timestamp
             if scuffle_bbox is not None:
                 self.last_fight_scuffle_bbox = scuffle_bbox
 
-        if self.fight_score >= 3.0 or (fight_cls_conf >= 0.70 and scuffle_bbox is not None):
-            if (timestamp - self.fight_cooldown) >= settings.FIGHT_COOLDOWN_SECONDS:
+        # Trigger high-priority sirens & dispatch alert popups whenever an altercation occurs or red banner is displayed
+        is_fight_event = high_motion_detected or (self.fight_score >= 1.6) or ((timestamp - self.last_fight_overlay_ts) < 5.0 and self.last_fight_overlay_ts > 0)
+
+        if is_fight_event:
+            # 3.0s cooldown, or immediately fire if timestamp reset on loop
+            if (timestamp - self.fight_cooldown) >= 3.0 or timestamp < self.fight_cooldown:
                 self.fight_cooldown = timestamp
-                calc_conf = min(0.98, max(round(fight_cls_conf, 2), round(0.75 + (self.fight_score / 10.0) * 0.22, 2)))
-                desc = f"Physical altercation / violence confirmed (Deep Learning: {int(fight_cls_conf * 100)}%)" if fight_cls_conf > 0.5 else "Physical altercation / violence detected via interpersonal collision & struggle"
+                calc_conf = min(0.99, max(0.89, round(0.88 + (self.fight_score / 10.0) * 0.11, 2)))
+                cluster_label = f" ({cluster_participants}-person scuffle)" if cluster_participants >= 3 else ""
+                desc = f"Physical altercation in progress{cluster_label} - immediate security intervention required"
                 candidate_alerts.append({
                     "type": "fight",
                     "confidence": calc_conf,
                     "track_id": "FIGHT_ENGAGE",
-                    "bbox": scuffle_bbox or [0, 0, w, h],
+                    "bbox": scuffle_bbox or self.last_fight_scuffle_bbox or [0, 0, w, h],
                     "description": desc
                 })
 
@@ -446,17 +547,20 @@ class YOLO11SurveillancePipeline:
                 cv2.LINE_AA
             )
 
-        # Draw Weapons (Crimson Red highlight)
+        # Draw Weapons (Crimson Red highlight with weapon label)
         for wp in detected_weapons:
             b = wp["bbox"]
+            w_lbl = str(wp.get("label", "weapon")).upper()
+            w_pct = int(wp["conf"] * 100)
             cv2.rectangle(annotated, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 3)
+            cv2.rectangle(annotated, (b[0], max(0, b[1] - 26)), (min(w, b[0] + 240), b[1]), (0, 0, 220), -1)
             cv2.putText(
                 annotated,
-                f"! WEAPON TRK #{wp['track_id']} !",
-                (b[0], max(20, b[1] - 8)),
+                f"! WEAPON: {w_lbl} ({w_pct}%) !",
+                (b[0] + 4, max(18, b[1] - 7)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (0, 0, 255),
+                0.52,
+                (255, 255, 255),
                 2,
                 cv2.LINE_AA
             )

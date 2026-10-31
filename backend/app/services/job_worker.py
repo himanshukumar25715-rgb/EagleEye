@@ -177,22 +177,22 @@ def _run_job_thread(job_id: int):
             if not ret:
                 consecutive_failures += 1
                 if is_live:
-                    # Live stream: temporary hiccup — try to reconnect after 3 failures
-                    if consecutive_failures >= 3:
-                        cap.release()
-                        time.sleep(0.5)
-                        if is_device_idx:
-                            cap = cv2.VideoCapture(int(video_path))
-                            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                        else:
-                            cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
-                            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                        consecutive_failures = 0
+                    # Live camera stream runs continuously until user explicitly stops it!
+                    # If stream drops temporarily (e.g. Wi-Fi lag), keep retrying every 1s
+                    time.sleep(0.8)
+                    cap.release()
+                    if is_device_idx:
+                        cap = cv2.VideoCapture(int(video_path))
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    else:
+                        cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                     continue
                 else:
                     # Recorded file: seamless continuous CCTV loop
                     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     frame_idx = 0
+                    pipeline.reset_state()
                     ret, frame = cap.read()
                     if not ret:
                         cap.release()
@@ -324,7 +324,11 @@ def _run_job_thread(job_id: int):
 
         cap.release()
 
-        if job.status != JobStatus.CANCELLED.value:
+        if is_live and not active_cancel_flags.get(job_id, False):
+            # Live stream was interrupted; reset to processing and wait
+            job.status = JobStatus.PROCESSING.value
+            db.commit()
+        elif job.status != JobStatus.CANCELLED.value:
             job.status = JobStatus.COMPLETED.value
             job.progress_pct = 100.0
             job.finished_at = datetime.utcnow()

@@ -1,0 +1,25 @@
+{
+  "connections": [
+    {
+      "name": "Eagle Eye Local Db2 Developer-C",
+      "host": "localhost",
+      "port": 50000,
+      "database": "EAGLEEYE",
+      "user": "db2inst1",
+      "password": "password",
+      "schema": "EAGLE_EYE",
+      "ssl": false
+    },
+    {
+      "name": "Eagle Eye IBM Cloud Db2 on Cloud",
+      "host": "dashdb-enterprise-yp-dal10-xx.services.dal.bluemix.net",
+      "port": 50001,
+      "database": "BLUDB",
+      "user": "your_db2_cloud_user",
+      "password": "your_db2_cloud_password",
+      "schema": "EAGLE_EYE",
+      "ssl": true
+    }
+  ]
+}
+

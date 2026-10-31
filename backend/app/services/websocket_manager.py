@@ -28,10 +28,23 @@ class ConnectionManager:
     def broadcast_sync(self, message: dict):
         """Thread-safe synchronous broadcast callable from background worker threads"""
         if self.main_loop and self.main_loop.is_running():
-            asyncio.run_coroutine_threadsafe(self.broadcast(message), self.main_loop)
-        else:
             try:
-                asyncio.run(self.broadcast(message))
+                asyncio.run_coroutine_threadsafe(self.broadcast(message), self.main_loop)
+                return
+            except Exception:
+                pass
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.run_coroutine_threadsafe(self.broadcast(message), loop)
+            else:
+                loop.run_until_complete(self.broadcast(message))
+        except Exception:
+            try:
+                new_l = asyncio.new_event_loop()
+                new_l.run_until_complete(self.broadcast(message))
+                new_l.close()
             except Exception:
                 pass
 

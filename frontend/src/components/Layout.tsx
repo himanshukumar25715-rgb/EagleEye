@@ -49,21 +49,26 @@ export const Layout: React.FC = () => {
 
   return (
     <SidebarProvider>
-      {/* Toast notifications */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+      {/* High-Visibility Security Alert Pop-ups */}
+      <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2.5 max-w-md w-full pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-center justify-between gap-4 p-4 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs font-semibold"
+            className="pointer-events-auto flex items-center justify-between gap-3 p-3.5 bg-neutral-900 border-2 border-red-500 shadow-[0_10px_25px_rgba(239,68,68,0.35)] rounded-[8px] text-xs font-bold animate-in fade-in slide-in-from-top-4 duration-300 backdrop-blur-md"
           >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-brand-red animate-pulse" />
-              <span className="text-brand-white">{toast.message}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center shrink-0">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              </div>
+              <div>
+                <div className="text-[10px] uppercase font-mono tracking-wider text-red-400">Tactical Security Alert</div>
+                <div className="text-white text-xs font-semibold mt-0.5">{toast.message}</div>
+              </div>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-brand-textMuted hover:text-brand-white transition"
-              title="Dismiss"
+              className="p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition shrink-0"
+              title="Dismiss Alert"
             >
               <X className="w-4 h-4" />
             </button>

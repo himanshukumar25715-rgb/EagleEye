@@ -1,0 +1,112 @@
+CREATE SCHEMA EAGLE_EYE;
+SET CURRENT SCHEMA = 'EAGLE_EYE';
+
+-- ----------------------------------------------------------------------------
+-- Table 1: CAMERAS (Surveillance Source Registry)
+-- Tracks security nodes, RTSP feeds, locations, and hardware resolution
+-- ----------------------------------------------------------------------------
+CREATE TABLE EAGLE_EYE.CAMERAS (
+    CAMERA_ID           INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
+    CAMERA_CODE         VARCHAR(16) NOT NULL,
+    NAME                VARCHAR(128) NOT NULL,
+    LOCATION_LABEL      VARCHAR(128) NOT NULL,
+    STREAM_URI          VARCHAR(512) NOT NULL,
+    STATUS              VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    FRAME_RATE          INTEGER DEFAULT 25,
+    RESOLUTION          VARCHAR(20) DEFAULT '1920x1080',
+    LATITUDE            DECIMAL(9, 6),
+    LONGITUDE           DECIMAL(9, 6),
+    IS_PTZ_ENABLED      SMALLINT DEFAULT 0,
+    CREATED_AT          TIMESTAMP NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+    CONSTRAINT PK_CAMERAS PRIMARY KEY (CAMERA_ID),
+    CONSTRAINT UQ_CAMERA_CODE UNIQUE (CAMERA_CODE),
+    CONSTRAINT CK_CAM_STATUS CHECK (STATUS IN ('ACTIVE', 'OFFLINE', 'MAINTENANCE', 'STREAMING_ERROR'))
+) ORGANIZE BY ROW;
+
+-- ----------------------------------------------------------------------------
+-- Table 2: INCIDENT_LOGS (Real-Time Threat Detection Events)
+-- Ingests threat classifications from YOLO11 / YOLOv8 neural network inference
+-- ----------------------------------------------------------------------------
+CREATE TABLE EAGLE_EYE.INCIDENT_LOGS (
+    INCIDENT_ID         BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10001, INCREMENT BY 1),
+    CAMERA_ID           INTEGER NOT NULL,
+    THREAT_TYPE         VARCHAR(32) NOT NULL,
+    SEVERITY_LEVEL      VARCHAR(16) NOT NULL,
+    CONFIDENCE_PCT      DECIMAL(5, 2) NOT NULL,
+    DESCRIPTION         VARCHAR(256),
+    DISPATCH_STATUS     VARCHAR(20) NOT NULL DEFAULT 'NEW',
+    DETECTED_AT         TIMESTAMP NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+    RESOLVED_AT         TIMESTAMP,
+    OPERATOR_NOTES      VARCHAR(512),
+    RESOLVED_BY_BADGE   VARCHAR(32),
+    CONSTRAINT PK_INCIDENT_LOGS PRIMARY KEY (INCIDENT_ID),
+    CONSTRAINT FK_INC_CAMERA FOREIGN KEY (CAMERA_ID) REFERENCES EAGLE_EYE.CAMERAS (CAMERA_ID) ON DELETE CASCADE,
+    CONSTRAINT CK_THREAT_TYPE CHECK (THREAT_TYPE IN ('WEAPON', 'FIGHT', 'UNATTENDED_OBJECT', 'OVERCROWDING', 'TAMPERING')),
+    CONSTRAINT CK_SEVERITY CHECK (SEVERITY_LEVEL IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFORMATIONAL')),
+    CONSTRAINT CK_DISPATCH CHECK (DISPATCH_STATUS IN ('NEW', 'ACKNOWLEDGED', 'GUARD_DISPATCHED', 'RESOLVED', 'FALSE_POSITIVE'))
+) ORGANIZE BY ROW;
+
+-- Index for high-velocity real-time alert queries
+CREATE INDEX EAGLE_EYE.IDX_INC_DISPATCH_TIME ON EAGLE_EYE.INCIDENT_LOGS (DISPATCH_STATUS, DETECTED_AT DESC);
+CREATE INDEX EAGLE_EYE.IDX_INC_THREAT_TYPE ON EAGLE_EYE.INCIDENT_LOGS (THREAT_TYPE, SEVERITY_LEVEL);
+
+-- ----------------------------------------------------------------------------
+-- Table 3: EVIDENCE_VAULT (Legal Chain of Custody & Cryptographic Hashes)
+-- Tamper-evident forensic repository with digital SHA-256 signatures
+-- ----------------------------------------------------------------------------
+CREATE TABLE EAGLE_EYE.EVIDENCE_VAULT (
+    EVIDENCE_ID         BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 50001, INCREMENT BY 1),
+    INCIDENT_ID         BIGINT NOT NULL,
+    EVIDENCE_KIND       VARCHAR(16) NOT NULL DEFAULT 'FRAME_SNAPSHOT',
+    FILE_PATH           VARCHAR(512) NOT NULL,
+    FILE_SIZE_BYTES     BIGINT NOT NULL,
+    SHA256_HASH         CHAR(64) NOT NULL,
+    BOUNDING_BOX_JSON   VARCHAR(1024),
+    CAPTURED_AT         TIMESTAMP NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+    VAULT_AUDIT_STATUS  VARCHAR(20) NOT NULL DEFAULT 'VALIDATED',
+    VERIFIED_BY         VARCHAR(64) DEFAULT 'EAGLE_EYE_AUTO_FORENSICS',
+    LAST_VERIFIED_AT    TIMESTAMP WITH DEFAULT CURRENT TIMESTAMP,
+    CONSTRAINT PK_EVIDENCE_VAULT PRIMARY KEY (EVIDENCE_ID),
+    CONSTRAINT FK_EV_INCIDENT FOREIGN KEY (INCIDENT_ID) REFERENCES EAGLE_EYE.INCIDENT_LOGS (INCIDENT_ID) ON DELETE CASCADE,
+    CONSTRAINT CK_EV_KIND CHECK (EVIDENCE_KIND IN ('FRAME_SNAPSHOT', 'VIDEO_CLIP', 'CROWD_HEATMAP', 'RADAR_VECTOR')),
+    CONSTRAINT CK_VAULT_STATUS CHECK (VAULT_AUDIT_STATUS IN ('VALIDATED', 'TAMPER_ALERT', 'SEALED_FOR_COURT', 'ARCHIVED'))
+) ORGANIZE BY ROW;
+
+CREATE INDEX EAGLE_EYE.IDX_EV_SHA256 ON EAGLE_EYE.EVIDENCE_VAULT (SHA256_HASH);
+
+-- ----------------------------------------------------------------------------
+-- Table 4: FORENSIC_AUDIT_TRAIL (Immutable Chain-of-Custody Access Log)
+-- Tracks every view, export, or audit access of evidentiary records
+-- ----------------------------------------------------------------------------
+CREATE TABLE EAGLE_EYE.FORENSIC_AUDIT_TRAIL (
+    AUDIT_ID            BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
+    EVIDENCE_ID         BIGINT NOT NULL,
+    ACTION_PERFORMED    VARCHAR(32) NOT NULL,
+    PERFORMED_BY_USER   VARCHAR(64) NOT NULL,
+    USER_ROLE           VARCHAR(32) NOT NULL,
+    IP_ADDRESS          VARCHAR(45),
+    TIMESTAMP_ACCESSED  TIMESTAMP NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+    ACCESS_REASON       VARCHAR(256),
+    CONSTRAINT PK_AUDIT_TRAIL PRIMARY KEY (AUDIT_ID),
+    CONSTRAINT FK_AUDIT_EV FOREIGN KEY (EVIDENCE_ID) REFERENCES EAGLE_EYE.EVIDENCE_VAULT (EVIDENCE_ID) ON DELETE CASCADE
+) ORGANIZE BY ROW;
+
+-- ----------------------------------------------------------------------------
+-- Initial Enterprise Seed Data for IBM Db2 Developer Extension Validation
+-- ----------------------------------------------------------------------------
+INSERT INTO EAGLE_EYE.CAMERAS (CAMERA_CODE, NAME, LOCATION_LABEL, STREAM_URI, FRAME_RATE, RESOLUTION) VALUES
+('CAM-01', 'CAM-01 (Live Mobile Unit)', 'Main Entrance Gate 1', 'http://192.168.137.22:8080/video', 25, '1920x1080'),
+('CAM-02', 'CAM-02 (Perimeter Watch)', 'North Perimeter Walkway', 'storage/uploads/fight_0001.mp4', 28, '1280x720'),
+('CAM-03', 'CAM-03 (Hostel Lobby)', 'Hostel Block A - Ground Floor', 'storage/uploads/sample_hostel.mp4', 25, '1280x720'),
+('CAM-04', 'CAM-04 (Corridor Transit)', 'Campus Dining Hall Corridor', 'storage/uploads/demo3.mp4', 30, '1920x1080');
+
+INSERT INTO EAGLE_EYE.INCIDENT_LOGS (CAMERA_ID, THREAT_TYPE, SEVERITY_LEVEL, CONFIDENCE_PCT, DESCRIPTION, DISPATCH_STATUS) VALUES
+(1, 'WEAPON', 'CRITICAL', 90.60, 'Firearm brandished on mobile feed (Pistol confirmed by YOLOv8n)', 'GUARD_DISPATCHED'),
+(2, 'FIGHT', 'CRITICAL', 98.40, 'Physical scuffle involving multiple individuals on north walkway', 'GUARD_DISPATCHED'),
+(4, 'UNATTENDED_OBJECT', 'HIGH', 88.50, 'Backpack unattended for >90 seconds on transit corridor bench', 'ACKNOWLEDGED'),
+(4, 'OVERCROWDING', 'MEDIUM', 94.20, 'Rapid density spike: 12 persons gathered in transit passageway', 'NEW');
+
+INSERT INTO EAGLE_EYE.EVIDENCE_VAULT (INCIDENT_ID, EVIDENCE_KIND, FILE_PATH, FILE_SIZE_BYTES, SHA256_HASH, BOUNDING_BOX_JSON, VAULT_AUDIT_STATUS) VALUES
+(10001, 'FRAME_SNAPSHOT', 'storage/evidence/ev_1_pistol_sample.jpg', 245180, 'a3f8c7e2b1094d528b176f4c398a12e564c781903e4d9b2a75c1028394fe71b2', '[118, 137, 227, 220]', 'SEALED_FOR_COURT'),
+(10002, 'FRAME_SNAPSHOT', 'storage/evidence/ev_2_fight_sample.jpg', 312950, 'f7b94108ec912a43b278912c44883910ab38c47e9124a9192487103289ab74c1', '[340, 68, 560, 420]', 'SEALED_FOR_COURT');
+

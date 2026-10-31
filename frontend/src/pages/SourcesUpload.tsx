@@ -50,7 +50,7 @@ const ALL_CAMERAS: CameraFeed[] = [
 
 export const SourcesUpload: React.FC = () => {
   const navigate = useNavigate();
-  const { activeJobs } = useAlertStore();
+  const { activeJobs, liveAlerts } = useAlertStore();
 
   const [page, setPage] = useState<number>(0);
   const [sources, setSources] = useState<any[]>([]);
@@ -58,6 +58,22 @@ export const SourcesUpload: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [focusedCam, setFocusedCam] = useState<CameraFeed | null>(null);
   const [loadedStreams, setLoadedStreams] = useState<Record<number, boolean>>({});
+  const [refreshKey, setRefreshKey] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const handleRefreshAllFeeds = async () => {
+    setIsRefreshing(true);
+    try {
+      // Re-trigger start-all on backend to ensure all video loops and live feeds are running
+      await apiRequest('/jobs/start-all', { method: 'POST' });
+    } catch {
+      // Ignore background retry error
+    }
+    // Update refresh key to force fresh MJPEG socket connections
+    setLoadedStreams({});
+    setRefreshKey(Date.now());
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
 
   // Phone / Live camera modal state
   const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -219,6 +235,17 @@ export const SourcesUpload: React.FC = () => {
             ))}
           </div>
 
+          {/* Instant Camera Feeds Refresh Button */}
+          <button
+            onClick={handleRefreshAllFeeds}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover text-brand-white rounded-[12px] text-xs font-semibold transition disabled:opacity-50"
+            title="Refresh and reconnect camera streams"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 text-brand-accent ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh feeds'}</span>
+          </button>
+
           {/* Connect Live Phone / IP Camera Button */}
           <button
             onClick={() => {
@@ -246,7 +273,8 @@ export const SourcesUpload: React.FC = () => {
       <div className="flex-1 grid grid-cols-3 grid-rows-3 gap-2.5 min-h-0 overflow-hidden">
         {currentCameras.map((cam) => {
           const liveJob = cam.sourceId ? activeJobs[cam.sourceId] : undefined;
-          const hasVideo = Boolean(cam.sourceId && loadedStreams[cam.id]);
+          const hasVideo = Boolean(cam.sourceId && loadedStreams[cam.id] !== false);
+          const liveAlertForCam = liveAlerts.find(a => (a.job_id === cam.id || a.job_id === cam.sourceId || a.source_name?.includes(cam.name)) && (Date.now() - new Date(a.created_at).getTime()) < 15000);
 
           return (
             <div
@@ -263,10 +291,10 @@ export const SourcesUpload: React.FC = () => {
               {/* Camera Background Video or Clean No-Camera CCTV Canvas */}
               {cam.sourceId ? (
                 <img
-                  src={`/api/v1/jobs/${cam.sourceId}/stream`}
+                  src={`/api/v1/jobs/${cam.sourceId}/stream?t=${refreshKey}`}
                   alt={cam.name}
                   className={`absolute inset-0 w-full h-full object-cover transition ${
-                    hasVideo ? 'opacity-100' : 'opacity-0'
+                    loadedStreams[cam.id] === false ? 'opacity-0' : 'opacity-100'
                   }`}
                   onLoad={() => {
                     setLoadedStreams((prev) => ({ ...prev, [cam.id]: true }));
@@ -277,8 +305,8 @@ export const SourcesUpload: React.FC = () => {
                 />
               ) : null}
 
-              {/* When there is not a video showing -> show No camera */}
-              {!hasVideo && (
+              {/* When there is not a video showing or stream errored -> show No camera */}
+              {(!cam.sourceId || loadedStreams[cam.id] === false) && (
                 <div className="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center p-3 select-none">
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
                   <div className="relative z-10 flex flex-col items-center justify-center gap-1.5">
@@ -329,8 +357,8 @@ export const SourcesUpload: React.FC = () => {
                     {hasVideo ? `${cam.fps} FPS` : '-- FPS'}
                   </span>
                   <span className="text-neutral-600">|</span>
-                  <span className={`font-semibold ${hasVideo ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                    {hasVideo ? 'CLEAR' : 'OFFLINE'}
+                  <span className={`font-semibold ${liveAlertForCam ? 'text-red-400' : hasVideo ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                    {liveAlertForCam ? '● ALERT' : hasVideo ? 'CLEAR' : 'OFFLINE'}
                   </span>
                 </div>
               </div>
