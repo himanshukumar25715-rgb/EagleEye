@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VideoOff, Upload } from 'lucide-react';
+import { VideoOff, Upload, Smartphone, RotateCcw, CheckCircle2, AlertCircle, Radio } from 'lucide-react';
 import { apiRequest } from '../api/client';
 import { useAlertStore } from '../stores/alertStore';
 
@@ -58,6 +58,56 @@ export const SourcesUpload: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [focusedCam, setFocusedCam] = useState<CameraFeed | null>(null);
   const [loadedStreams, setLoadedStreams] = useState<Record<number, boolean>>({});
+
+  // Phone / Live camera modal state
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [selectedCamChannel, setSelectedCamChannel] = useState(1);
+  const [streamUrlInput, setStreamUrlInput] = useState('');
+  const [connectingPhone, setConnectingPhone] = useState(false);
+  const [phoneCamMsg, setPhoneCamMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleConnectPhoneCamera = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!streamUrlInput.trim()) {
+      setPhoneCamMsg({ type: 'error', text: 'Please enter a stream URL (e.g. http://192.168.1.15:8080/video) or 0 for laptop webcam' });
+      return;
+    }
+    setConnectingPhone(true);
+    setPhoneCamMsg(null);
+    try {
+      const res = await apiRequest<any>(`/sources/${selectedCamChannel}/connect-live`, {
+        method: 'POST',
+        body: JSON.stringify({
+          stream_url: streamUrlInput.trim(),
+          name: `CAM-0${selectedCamChannel} (Live Camera)`,
+          location_label: 'Live Mobile Demo Stream',
+        }),
+      });
+      setPhoneCamMsg({ type: 'success', text: res.message || 'Connected live camera successfully!' });
+      setLoadedStreams((prev) => ({ ...prev, [selectedCamChannel]: false }));
+      setTimeout(() => {
+        setLoadedStreams((prev) => ({ ...prev, [selectedCamChannel]: true }));
+        setShowPhoneModal(false);
+      }, 1000);
+    } catch (err: any) {
+      setPhoneCamMsg({ type: 'error', text: err.message || 'Failed to connect stream. Ensure phone and PC are on the same Wi-Fi.' });
+    } finally {
+      setConnectingPhone(false);
+    }
+  };
+
+  const handleResetSample = async (camId: number) => {
+    try {
+      await apiRequest(`/sources/${camId}/reset-sample`, { method: 'POST' });
+      setLoadedStreams((prev) => ({ ...prev, [camId]: false }));
+      setTimeout(() => {
+        setLoadedStreams((prev) => ({ ...prev, [camId]: true }));
+      }, 1000);
+      alert(`Reset CAM-0${camId} back to default surveillance video`);
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -168,6 +218,18 @@ export const SourcesUpload: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {/* Connect Live Phone / IP Camera Button */}
+          <button
+            onClick={() => {
+              setShowPhoneModal(true);
+              setPhoneCamMsg(null);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1 bg-brand-accent hover:bg-brand-accentHover text-white rounded-[12px] text-xs font-semibold shadow-sm transition"
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Connect live phone / IP camera</span>
+          </button>
 
           {/* Upload Footage Page Trigger */}
           <button
@@ -413,6 +475,155 @@ export const SourcesUpload: React.FC = () => {
           </div>
         </div>
       )}
+    
+      {/* Live Phone Camera / IP Camera Stream Ingestion Modal */}
+      {showPhoneModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-brand-border pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-brand-white">Connect phone camera live (Demo existing infra)</h3>
+                  <p className="text-xs text-brand-textMuted font-semibold mt-0.5">
+                    Demonstrates Eagle Eye's ability to ingest live CCTV / IP camera streams
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPhoneModal(false)}
+                className="text-xs text-brand-textMuted hover:text-brand-white font-semibold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Step-by-Step Instructions */}
+            <div className="p-3 bg-brand-card rounded-[12px] shadow-[0_0_0_1px_#e6e3dc] space-y-2 text-xs">
+              <p className="font-semibold text-brand-white flex items-center gap-1.5">
+                <Radio className="w-3.5 h-3.5 text-brand-accent animate-pulse" />
+                <span>How to turn your phone into a live security camera in 30 seconds:</span>
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-brand-textMuted font-semibold pl-1">
+                <li>Connect your phone to the <strong>same Wi-Fi</strong> network as this PC.</li>
+                <li>Open <strong>IP Webcam</strong> (Android) or <strong>DroidCam</strong> (iOS/Android) and tap <strong>Start server</strong>.</li>
+                <li>Paste the URL shown on your phone screen below and click <strong>Connect</strong>!</li>
+              </ol>
+            </div>
+
+            {phoneCamMsg && (
+              <div
+                className={`p-3 rounded-[12px] text-xs font-semibold flex items-center gap-2 ${
+                  phoneCamMsg.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-500 shadow-[0_0_0_1px_#10b981]'
+                    : 'bg-brand-red/10 text-brand-red shadow-[0_0_0_1px_#ef4444]'
+                }`}
+              >
+                {phoneCamMsg.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{phoneCamMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConnectPhoneCamera} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-brand-textMuted mb-1">
+                  Target camera channel on matrix
+                </label>
+                <select
+                  value={selectedCamChannel}
+                  onChange={(e) => setSelectedCamChannel(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs text-brand-white font-semibold focus:outline-none"
+                >
+                  <option value={1}>CAM-01: Main Entrance Gate 1</option>
+                  <option value={2}>CAM-02: North Perimeter Walkway</option>
+                  <option value={3}>CAM-03: Hostel Block A Lobby</option>
+                  <option value={4}>CAM-04: Dining Hall Corridor</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-brand-textMuted mb-1">
+                  Live stream URL or webcam index
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={streamUrlInput}
+                  onChange={(e) => setStreamUrlInput(e.target.value)}
+                  placeholder="e.g. http://192.168.1.15:8080/video or 0"
+                  className="w-full px-3 py-2 bg-brand-card shadow-[0_0_0_1px_#e6e3dc] rounded-[12px] text-xs text-brand-white font-semibold font-mono focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                />
+              </div>
+
+              {/* Quick Preset Fillers */}
+              <div>
+                <span className="text-[11px] text-brand-textMuted font-semibold block mb-1.5">
+                  Quick test presets:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStreamUrlInput('0')}
+                    className="px-2.5 py-1 text-[11px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[8px] text-brand-accent font-semibold"
+                  >
+                    Laptop Webcam (0)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStreamUrlInput('http://192.168.1.50:8080/video')}
+                    className="px-2.5 py-1 text-[11px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[8px] text-brand-white font-semibold"
+                  >
+                    IP Webcam (8080)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStreamUrlInput('http://192.168.1.50:4747/video')}
+                    className="px-2.5 py-1 text-[11px] bg-brand-card shadow-[0_0_0_1px_#e6e3dc] hover:bg-brand-cardHover rounded-[8px] text-brand-white font-semibold"
+                  >
+                    DroidCam (4747)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-brand-border">
+                <button
+                  type="button"
+                  onClick={() => handleResetSample(selectedCamChannel)}
+                  className="flex items-center gap-1 text-xs text-brand-textMuted hover:text-brand-white font-semibold"
+                  title="Restore default test video"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restore sample video</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPhoneModal(false)}
+                    className="px-3 py-1.5 rounded-[12px] text-xs font-semibold text-brand-textMuted hover:text-brand-white transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={connectingPhone}
+                    className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accentHover text-white rounded-[12px] text-xs font-semibold transition shadow-sm disabled:opacity-50"
+                  >
+                    {connectingPhone ? 'Connecting...' : 'Connect and stream live'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

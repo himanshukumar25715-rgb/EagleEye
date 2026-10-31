@@ -253,3 +253,4 @@ export const CollegeAdminPortal: React.FC = () => {
 };
 
 export default CollegeAdminPortal;
+

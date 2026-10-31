@@ -9,7 +9,9 @@ from app.models import Source, Job, JobStatus, User, AuditLog
 from app.schemas import SourceResponse, JobResponse
 from app.api.deps import get_current_user, require_operator
 from app.core.config import settings
-from app.services.job_worker import queue_video_job
+from app.services.job_worker import queue_video_job, cancel_job
+from pydantic import BaseModel
+import time
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -144,3 +146,71 @@ def create_sources_batch(
         "message": f"Successfully ingested {len(created_sources)} CCTV footage files",
         "sources": created_sources
     }
+
+
+class ConnectLiveCameraRequest(BaseModel):
+    stream_url: str
+    name: Optional[str] = None
+    location_label: Optional[str] = None
+
+@router.post("/{source_id}/connect-live")
+def connect_live_camera(
+    source_id: int,
+    body: ConnectLiveCameraRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    source = db.query(Source).filter(Source.id == source_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Camera channel not found")
+
+    url = body.stream_url.strip()
+    source.path_or_uri = url
+    source.type = "rtsp" if url.startswith(("http", "rtsp")) else "webcam"
+    if body.name:
+        source.name = body.name
+    if body.location_label:
+        source.location_label = body.location_label
+    db.commit()
+    db.refresh(source)
+
+    # Re-queue job
+    cancel_job(source_id)
+    time.sleep(0.3)
+    queue_video_job(source_id)
+
+    return {
+        "message": f"Connected live camera to CAM-{source_id:02d} successfully!",
+        "source": SourceResponse.from_orm(source)
+    }
+
+@router.post("/{source_id}/reset-sample")
+def reset_sample_camera(
+    source_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    source = db.query(Source).filter(Source.id == source_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Camera channel not found")
+
+    samples = {
+        1: ("Main Entrance Gate 1", "Campus Gate 1 - North Boundary", "storage/uploads/sample_gate.mp4"),
+        2: ("North Perimeter Walkway", "North Walkway - Sector B", "storage/uploads/sample_corridor.mp4"),
+        3: ("Hostel Block A Lobby", "Hostel Block A - Ground Floor", "storage/uploads/sample_hostel.mp4"),
+        4: ("Dining Hall Corridor", "Central Mess and Dining Wing", "storage/uploads/sample_hall.mp4"),
+    }
+
+    if source_id in samples:
+        name, loc, path = samples[source_id]
+        source.name = name
+        source.location_label = loc
+        source.path_or_uri = path
+        source.type = "video_file"
+        db.commit()
+
+        cancel_job(source_id)
+        time.sleep(0.3)
+        queue_video_job(source_id)
+
+    return {"message": f"Reset CAM-{source_id:02d} to default surveillance footage"}
